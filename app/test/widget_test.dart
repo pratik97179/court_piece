@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:court_piece/app.dart';
+import 'package:court_piece/design/design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:court_piece/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('toggles light and dark CourtTheme', (tester) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(const CourtApp());
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    expect(find.byType(CourtScreen), findsOneWidget);
+    expect(
+      CourtTheme.of(tester.element(find.byType(CourtScreen))).brightness,
+      Brightness.light,
+    );
+    expect(find.byIcon(Icons.dark_mode), findsOneWidget);
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('theme-toggle')));
+    await tester.pumpAndSettle();
+
+    expect(
+      CourtTheme.of(tester.element(find.byType(CourtScreen))).brightness,
+      Brightness.dark,
+    );
+    expect(find.byIcon(Icons.light_mode), findsOneWidget);
   });
 }
