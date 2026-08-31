@@ -125,6 +125,71 @@ void main() {
     expect((state.phase as MatchOver).winner, Team.northSouth);
     expect(legalActions(state, Seat.south), isEmpty);
   });
+
+  test('hakem sees five cards, others do not', () {
+    final state = startMatch(seed: 1, dealer: Seat.south);
+    final hakem = viewFor(state, state.hakem);
+    final other = viewFor(state, Seat.south);
+    expect(hakem.hand, hasLength(5));
+    expect(other.hand, isEmpty);
+    expect(other.handCounts[Seat.east], 5);
+    _assertNoLeak(state, other);
+  });
+
+  test('hidden hands after trump is set', () {
+    var state = startMatch(seed: 3);
+    state = _mustOk(state, CallTrump(seat: state.hakem, suit: Suit.hearts));
+    final view = viewFor(state, Seat.south);
+    expect(view.hand, hasLength(13));
+    _assertNoLeak(state, view);
+  });
+
+  test('AI only emits legal actions across random matches', () {
+    for (var seed = 0; seed < 40; seed++) {
+      var state = startMatch(seed: seed, targetCourts: 2);
+      var steps = 0;
+      while (state.phase is! MatchOver && steps < 4000) {
+        steps++;
+        if (state.phase is DealOver) {
+          state = _mustOk(state, const ContinueMatch(seat: Seat.south));
+          continue;
+        }
+        final actor = state.phase is AwaitingTrump ? state.hakem : state.turn;
+        final action = chooseAction(state, actor);
+        expect(action, isNotNull, reason: 'seed $seed step $steps');
+        final legal = legalActions(state, actor);
+        expect(legal.any((a) => _sameAction(a, action!)), isTrue);
+        state = _mustOk(state, action!);
+      }
+      expect(state.phase, isA<MatchOver>(), reason: 'seed $seed');
+    }
+  });
+}
+
+bool _sameAction(Action a, Action b) {
+  if (a.runtimeType != b.runtimeType || a.seat != b.seat) {
+    return false;
+  }
+  return switch (a) {
+    CallTrump(:final suit) => b is CallTrump && b.suit == suit,
+    PlayCard(:final card) => b is PlayCard && b.card == card,
+    ContinueMatch() => b is ContinueMatch,
+  };
+}
+
+void _assertNoLeak(GameState state, MatchView view) {
+  final mine = state.hands[view.you]!.toSet();
+  for (final card in view.hand) {
+    expect(mine.contains(card), isTrue);
+  }
+  for (final seat in Seat.values) {
+    if (seat == view.you) {
+      continue;
+    }
+    for (final card in state.hands[seat]!) {
+      expect(view.hand.contains(card), isFalse, reason: 'leaked $card from $seat');
+    }
+  }
 }
 
 GameState _mustOk(GameState state, Action action) {
