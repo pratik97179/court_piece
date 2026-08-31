@@ -1,9 +1,16 @@
+enum Team { northSouth, eastWest }
+
 /// Table seat. [next] is counter-clockwise. Hakem is the dealer's [next].
 enum Seat {
   north,
   east,
   south,
   west;
+
+  Team get team => switch (this) {
+    north || south => Team.northSouth,
+    east || west => Team.eastWest,
+  };
 
   Seat get next => switch (this) {
     south => east,

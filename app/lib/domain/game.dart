@@ -18,6 +18,18 @@ final class Playing extends Phase {
   final List<Play> trick;
 }
 
+final class DealOver extends Phase {
+  const DealOver({
+    required this.trump,
+    required this.winner,
+    required this.court,
+  });
+
+  final Suit trump;
+  final Team winner;
+  final bool court;
+}
+
 /// One card played into the current trick.
 final class Play {
   const Play({required this.seat, required this.card});
@@ -106,6 +118,20 @@ final class GameState {
       deal: deal,
       phase: Playing(trump: trump, trick: trick),
       toAct: toAct ?? deal.hakem,
+      completed: completed,
+    );
+  }
+
+  factory GameState.over({
+    required Deal deal,
+    required DealOver phase,
+    required List<CompletedTrick> completed,
+    required Seat toAct,
+  }) {
+    return GameState._(
+      deal: deal,
+      phase: phase,
+      toAct: toAct,
       completed: completed,
     );
   }

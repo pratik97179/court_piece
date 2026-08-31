@@ -79,17 +79,48 @@ ReduceResult _playCard(GameState state, Seat seat, Card card) {
     );
   }
   final winner = trickWinner(trick, phase.trump);
+  final completed = [
+    ...state.completed,
+    CompletedTrick(winner: winner, plays: trick),
+  ];
+  final over = dealOutcome(completed, phase.trump);
+  if (over != null) {
+    return Accept(
+      GameState.over(
+        deal: deal,
+        phase: over,
+        completed: completed,
+        toAct: winner,
+      ),
+    );
+  }
   return Accept(
     GameState.playing(
       deal: deal,
       trump: phase.trump,
-      completed: [
-        ...state.completed,
-        CompletedTrick(winner: winner, plays: trick),
-      ],
+      completed: completed,
       toAct: winner,
     ),
   );
+}
+
+/// Seven tricks wins the deal. The first seven in a row is a court.
+DealOver? dealOutcome(List<CompletedTrick> completed, Suit trump) {
+  var northSouth = 0;
+  var eastWest = 0;
+  for (final trick in completed) {
+    if (trick.winner.team == Team.northSouth) {
+      northSouth += 1;
+    } else {
+      eastWest += 1;
+    }
+  }
+  if (northSouth < 7 && eastWest < 7) {
+    return null;
+  }
+  final winner = northSouth >= 7 ? Team.northSouth : Team.eastWest;
+  final court = completed.take(7).every((trick) => trick.winner.team == winner);
+  return DealOver(trump: trump, winner: winner, court: court);
 }
 
 bool _beats(
