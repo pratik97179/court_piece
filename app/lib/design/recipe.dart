@@ -9,11 +9,15 @@ final class CourtRecipe {
     required this.inset,
     required this.gap,
     required this.titleSize,
+    required this.cardWidth,
+    required this.cardRadius,
   });
 
   final double inset;
   final double gap;
   final double titleSize;
+  final double cardWidth;
+  final double cardRadius;
 
   static CourtRecipe forBreakpoint(CourtBreakpoint breakpoint) {
     return switch (breakpoint) {
@@ -21,16 +25,22 @@ final class CourtRecipe {
         inset: 12,
         gap: 8,
         titleSize: 18,
+        cardWidth: 56,
+        cardRadius: 4,
       ),
       CourtBreakpoint.medium => const CourtRecipe._(
         inset: 16,
         gap: 8,
         titleSize: 22,
+        cardWidth: 72,
+        cardRadius: 6,
       ),
       CourtBreakpoint.expanded => const CourtRecipe._(
         inset: 24,
         gap: 12,
         titleSize: 24,
+        cardWidth: 88,
+        cardRadius: 8,
       ),
     };
   }

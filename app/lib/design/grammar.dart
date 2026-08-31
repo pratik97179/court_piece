@@ -85,7 +85,9 @@ class CourtCluster extends StatelessWidget {
       direction: axis == CourtClusterAxis.vertical
           ? Axis.vertical
           : Axis.horizontal,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: axis == CourtClusterAxis.vertical
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.center,
       children: [
         for (var i = 0; i < children.length; i++) ...[
           if (i > 0) SizedBox(width: gap, height: gap),

@@ -13,6 +13,7 @@ void main() {
     expect(find.byType(CourtScreen), findsOneWidget);
     expect(find.byType(CourtHeader), findsOneWidget);
     expect(find.byType(CourtCluster), findsOneWidget);
+    expect(find.byType(PlayingCard), findsNWidgets(4));
     expect(find.text('Court Piece'), findsOneWidget);
     expect(
       CourtTheme.of(tester.element(find.byType(CourtScreen))).brightness,
