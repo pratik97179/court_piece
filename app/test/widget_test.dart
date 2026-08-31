@@ -12,8 +12,8 @@ void main() {
 
     expect(find.byType(CourtScreen), findsOneWidget);
     expect(find.byType(CourtHeader), findsOneWidget);
-    expect(find.byType(CourtCluster), findsOneWidget);
-    expect(find.byType(PlayingCard), findsNWidgets(4));
+    expect(find.byType(GameTable), findsOneWidget);
+    expect(find.byType(PlayingCard), findsNWidgets(5));
     expect(find.text('Court Piece'), findsOneWidget);
     expect(
       CourtTheme.of(tester.element(find.byType(CourtScreen))).brightness,
@@ -45,5 +45,16 @@ void main() {
     expect(await breakpointAt(const Size(390, 800)), CourtBreakpoint.compact);
     expect(await breakpointAt(const Size(700, 800)), CourtBreakpoint.medium);
     expect(await breakpointAt(const Size(1200, 800)), CourtBreakpoint.expanded);
+  });
+
+  test('TableGeometry grows with the shortest side', () {
+    final small = TableGeometry.from(
+      BoxConstraints.tight(const Size(400, 800)),
+    );
+    final large = TableGeometry.from(
+      BoxConstraints.tight(const Size(1200, 800)),
+    );
+    expect(large.cardWidth, greaterThan(small.cardWidth));
+    expect(large.wellSize, greaterThan(small.wellSize));
   });
 }

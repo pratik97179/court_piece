@@ -1,13 +1,16 @@
 import 'package:court_piece/design/recipe.dart';
+import 'package:court_piece/design/table.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
 
 /// Page shell: optional header, clustered body.
 class CourtScreen extends StatelessWidget {
-  const CourtScreen({super.key, this.header, required this.body});
+  const CourtScreen({super.key, this.header, this.body, this.table})
+    : assert((body == null) != (table == null));
 
   final CourtHeader? header;
-  final CourtCluster body;
+  final CourtCluster? body;
+  final GameTable? table;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,7 @@ class CourtScreen extends StatelessWidget {
                   children: [
                     ?header,
                     if (header != null) SizedBox(height: recipe.gap),
-                    Expanded(child: body),
+                    Expanded(child: table ?? body!),
                   ],
                 ),
               ),

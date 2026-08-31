@@ -1,5 +1,6 @@
 import 'package:court_piece/application/card_art.dart';
 import 'package:court_piece/design/recipe.dart';
+import 'package:court_piece/design/table.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -32,10 +33,13 @@ class PlayingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = CourtScope.of(context).recipe;
+    final table = TableScope.maybeOf(context);
     final theme = CourtTheme.of(context);
-    final width = recipe.cardWidth;
+    final width = table?.cardWidth ?? recipe.cardWidth;
     final height = width / _aspect;
-    final radius = BorderRadius.circular(recipe.cardRadius);
+    final radius = BorderRadius.circular(
+      table?.cardRadius ?? recipe.cardRadius,
+    );
     final dimmed = presence == CardPresence.dimmed;
     final child = presence == CardPresence.facedown
         ? _CardBack(radius: radius)

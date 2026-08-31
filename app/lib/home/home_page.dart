@@ -14,6 +14,16 @@ class HomePage extends StatelessWidget {
   final bool isDark;
   final VoidCallback onToggleTheme;
 
+  PlayingCard _card(ArtRank rank, ArtSuit suit, CardPresence presence) {
+    return PlayingCard(
+      art: art,
+      view: CardView(
+        id: CardArtId(rank: rank, suit: suit),
+      ),
+      presence: presence,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return CourtScreen(
@@ -26,38 +36,12 @@ class HomePage extends StatelessWidget {
           icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
         ),
       ),
-      body: CourtCluster(
-        axis: CourtClusterAxis.horizontal,
-        children: [
-          PlayingCard(
-            art: art,
-            view: const CardView(
-              id: CardArtId(rank: ArtRank.ace, suit: ArtSuit.spades),
-            ),
-            presence: CardPresence.idle,
-          ),
-          PlayingCard(
-            art: art,
-            view: const CardView(
-              id: CardArtId(rank: ArtRank.king, suit: ArtSuit.hearts),
-            ),
-            presence: CardPresence.playable,
-          ),
-          PlayingCard(
-            art: art,
-            view: const CardView(
-              id: CardArtId(rank: ArtRank.queen, suit: ArtSuit.diamonds),
-            ),
-            presence: CardPresence.selected,
-          ),
-          PlayingCard(
-            art: art,
-            view: const CardView(
-              id: CardArtId(rank: ArtRank.jack, suit: ArtSuit.clubs),
-            ),
-            presence: CardPresence.facedown,
-          ),
-        ],
+      table: GameTable(
+        north: _card(ArtRank.ace, ArtSuit.spades, CardPresence.facedown),
+        east: _card(ArtRank.king, ArtSuit.hearts, CardPresence.facedown),
+        south: _card(ArtRank.queen, ArtSuit.diamonds, CardPresence.idle),
+        west: _card(ArtRank.jack, ArtSuit.clubs, CardPresence.facedown),
+        well: _card(ArtRank.ten, ArtSuit.spades, CardPresence.playable),
       ),
     );
   }
