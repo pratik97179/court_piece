@@ -1,3 +1,4 @@
+import 'package:court_piece/design/recipe.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
 
@@ -13,18 +14,28 @@ class CourtScreen extends StatelessWidget {
     final theme = CourtTheme.of(context);
     return Material(
       color: theme.felt,
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(theme.inset),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ?header,
-              if (header != null) SizedBox(height: theme.gap),
-              Expanded(child: body),
-            ],
-          ),
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final breakpoint = CourtRecipe.resolve(constraints);
+          final recipe = CourtRecipe.forBreakpoint(breakpoint);
+          return CourtScope(
+            breakpoint: breakpoint,
+            recipe: recipe,
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(recipe.inset),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ?header,
+                    if (header != null) SizedBox(height: recipe.gap),
+                    Expanded(child: body),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -39,13 +50,13 @@ class CourtHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = CourtTheme.of(context);
+    final recipe = CourtScope.of(context).recipe;
+    final titleStyle = Theme.of(context).textTheme.titleMedium
+        ?.copyWith(fontSize: recipe.titleSize);
     return Row(
       children: [
-        Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.titleMedium),
-        ),
-        if (trailing != null) ...[SizedBox(width: theme.gap), trailing!],
+        Expanded(child: Text(title, style: titleStyle)),
+        if (trailing != null) ...[SizedBox(width: recipe.gap), trailing!],
       ],
     );
   }
@@ -53,7 +64,7 @@ class CourtHeader extends StatelessWidget {
 
 enum CourtClusterAxis { vertical, horizontal }
 
-/// Stacked children with theme gap.
+/// Stacked children with recipe gap.
 class CourtCluster extends StatelessWidget {
   const CourtCluster({
     super.key,
@@ -66,7 +77,7 @@ class CourtCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gap = CourtTheme.of(context).gap;
+    final gap = CourtScope.of(context).recipe.gap;
     if (children.isEmpty) {
       return const SizedBox.expand();
     }

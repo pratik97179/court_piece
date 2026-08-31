@@ -1,5 +1,3 @@
-import 'dart:ui' show lerpDouble;
-
 import 'package:flutter/material.dart';
 
 @immutable
@@ -47,7 +45,6 @@ abstract final class _TokenType {
 
 abstract final class _TokenSpace {
   static const double sm = 8;
-  static const double md = 16;
 }
 
 abstract final class _TokenMotion {
@@ -65,8 +62,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
     required this.accent,
     required this.surface,
     required this.danger,
-    required this.inset,
-    required this.gap,
   });
 
   factory CourtTheme.light() =>
@@ -84,8 +79,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       accent: palette.accent,
       surface: palette.surface,
       danger: palette.danger,
-      inset: _TokenSpace.md,
-      gap: _TokenSpace.sm,
     );
   }
 
@@ -96,8 +89,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
   final Color accent;
   final Color surface;
   final Color danger;
-  final double inset;
-  final double gap;
 
   static CourtTheme of(BuildContext context) {
     final theme = Theme.of(context).extension<CourtTheme>();
@@ -164,8 +155,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
     Color? accent,
     Color? surface,
     Color? danger,
-    double? inset,
-    double? gap,
   }) {
     return CourtTheme(
       brightness: brightness ?? this.brightness,
@@ -175,8 +164,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       accent: accent ?? this.accent,
       surface: surface ?? this.surface,
       danger: danger ?? this.danger,
-      inset: inset ?? this.inset,
-      gap: gap ?? this.gap,
     );
   }
 
@@ -193,8 +180,6 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       accent: Color.lerp(accent, other.accent, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
-      inset: lerpDouble(inset, other.inset, t)!,
-      gap: lerpDouble(gap, other.gap, t)!,
     );
   }
 }

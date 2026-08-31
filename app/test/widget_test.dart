@@ -27,4 +27,22 @@ void main() {
       Brightness.dark,
     );
   });
+
+  testWidgets('CourtScreen picks compact medium and expanded recipes', (
+    tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    Future<CourtBreakpoint> breakpointAt(Size size) async {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(const CourtApp());
+      return CourtScope.of(tester.element(find.byType(CourtHeader))).breakpoint;
+    }
+
+    expect(await breakpointAt(const Size(390, 800)), CourtBreakpoint.compact);
+    expect(await breakpointAt(const Size(700, 800)), CourtBreakpoint.medium);
+    expect(await breakpointAt(const Size(1200, 800)), CourtBreakpoint.expanded);
+  });
 }
