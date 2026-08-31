@@ -1,5 +1,4 @@
 import 'package:court_piece/application/card_art.dart';
-import 'package:court_piece/design/recipe.dart';
 import 'package:court_piece/design/table.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
@@ -13,81 +12,81 @@ final class CardView {
   final CardArtId id;
 }
 
-/// Face or back of a card. Size comes from [CourtRecipe].
+/// Face or back of a card. Size follows [CardScale] from [TableModule].
 class PlayingCard extends StatelessWidget {
   PlayingCard({
     Key? key,
     required this.art,
     required this.view,
     required this.presence,
+    this.scale = CardScale.trick,
     this.onTap,
   }) : super(key: key ?? ValueKey<CardArtId>(view.id));
 
   final CardArt art;
   final CardView view;
   final CardPresence presence;
+  final CardScale scale;
   final VoidCallback? onTap;
 
-  static const _aspect = 5 / 7;
+  static const aspect = 5 / 7;
 
   @override
   Widget build(BuildContext context) {
-    final recipe = CourtScope.of(context).recipe;
-    final table = TableScope.maybeOf(context);
-    final theme = CourtTheme.of(context);
-    final width = table?.cardWidth ?? recipe.cardWidth;
-    final height = width / _aspect;
-    final radius = BorderRadius.circular(
-      table?.cardRadius ?? recipe.cardRadius,
-    );
-    final dimmed = presence == CardPresence.dimmed;
-    final child = presence == CardPresence.facedown
-        ? _CardBack(radius: radius)
-        : SvgPicture.asset(
-            art.faceAsset(view.id),
-            fit: BoxFit.cover,
-            width: width,
-            height: height,
-          );
-
-    return RepaintBoundary(
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: Material(
-          color: theme.surface,
-          elevation: presence == CardPresence.selected ? 2 : 0,
-          shadowColor: theme.ink,
-          shape: RoundedRectangleBorder(
-            borderRadius: radius,
-            side: BorderSide(color: _border(theme)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: dimmed
-                ? ColorFiltered(
-                    colorFilter: ColorFilter.mode(
-                      theme.felt.withValues(alpha: 0.45),
-                      BlendMode.srcATop,
-                    ),
-                    child: child,
-                  )
-                : child,
-          ),
-        ),
+    final module = TableScope.maybeOf(context);
+    if (module != null) {
+      final width = module.widthFor(scale);
+      return _face(context, width, width / aspect);
+    }
+    return AspectRatio(
+      aspectRatio: aspect,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return _face(context, constraints.maxWidth, constraints.maxHeight);
+        },
       ),
     );
   }
 
-  Color _border(CourtTheme theme) {
-    return switch (presence) {
-      CardPresence.selected => theme.accent,
-      CardPresence.playable => theme.ink,
-      CardPresence.idle => theme.muted,
-      CardPresence.dimmed => theme.muted,
-      CardPresence.facedown => theme.accent,
-    };
+  Widget _face(BuildContext context, double width, double height) {
+    final theme = CourtTheme.of(context);
+    final radius = BorderRadius.circular(width * 0.08);
+    final dimmed = presence == CardPresence.dimmed;
+    final selected = presence == CardPresence.selected;
+    final child = presence == CardPresence.facedown
+        ? _CardBack(radius: radius)
+        : SvgPicture.asset(art.faceAsset(view.id), fit: BoxFit.contain);
+    return RepaintBoundary(
+      child: Transform.translate(
+        offset: Offset(0, selected ? -5 : 0),
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: Material(
+            color: theme.surface,
+            elevation: selected ? 3 : 1,
+            shadowColor: theme.ink.withValues(alpha: 0.28),
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(color: theme.ink.withValues(alpha: 0.06)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: onTap,
+              child: dimmed
+                  ? ColorFiltered(
+                      colorFilter: ColorFilter.mode(
+                        theme.felt.withValues(alpha: 0.4),
+                        BlendMode.srcATop,
+                      ),
+                      child: child,
+                    )
+                  : child,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -100,7 +99,7 @@ class _CardBack extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = CourtTheme.of(context);
     return DecoratedBox(
-      decoration: BoxDecoration(color: theme.felt, borderRadius: radius),
+      decoration: BoxDecoration(color: theme.surface, borderRadius: radius),
       child: CustomPaint(
         painter: _BackPainter(theme.accent, theme.ink),
         child: const SizedBox.expand(),
@@ -117,25 +116,35 @@ class _BackPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final inset = size.shortestSide * 0.12;
+    final inset = size.shortestSide * 0.1;
     final rect = Rect.fromLTWH(
       inset,
       inset,
       size.width - inset * 2,
       size.height - inset * 2,
     );
-    final paint = Paint()
-      ..color = accent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = size.shortestSide * 0.04;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(inset));
+    canvas.drawRRect(rrect, Paint()..color = accent.withValues(alpha: 0.12));
     canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, Radius.circular(inset)),
-      paint,
+      rrect,
+      Paint()
+        ..color = accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.shortestSide * 0.045,
     );
-    canvas.drawCircle(
-      rect.center,
-      size.shortestSide * 0.12,
-      Paint()..color = ink.withValues(alpha: 0.35),
+    final center = rect.center;
+    final diamond = Path()
+      ..moveTo(center.dx, rect.top + inset)
+      ..lineTo(rect.right - inset, center.dy)
+      ..lineTo(center.dx, rect.bottom - inset)
+      ..lineTo(rect.left + inset, center.dy)
+      ..close();
+    canvas.drawPath(
+      diamond,
+      Paint()
+        ..color = ink.withValues(alpha: 0.28)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = size.shortestSide * 0.035,
     );
   }
 

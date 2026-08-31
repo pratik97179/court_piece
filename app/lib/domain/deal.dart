@@ -29,6 +29,22 @@ final class Deal {
       Seat.west => west,
     };
   }
+
+  Deal without(Seat seat, Card card) {
+    final next = List<Card>.of(hand(seat));
+    if (!next.remove(card)) {
+      throw StateError('card not in hand');
+    }
+    return Deal._(
+      dealer: dealer,
+      hakem: hakem,
+      north: seat == Seat.north ? List<Card>.unmodifiable(next) : north,
+      east: seat == Seat.east ? List<Card>.unmodifiable(next) : east,
+      south: seat == Seat.south ? List<Card>.unmodifiable(next) : south,
+      west: seat == Seat.west ? List<Card>.unmodifiable(next) : west,
+      stock: stock,
+    );
+  }
 }
 
 /// Deterministic Fisher-Yates. Same seed, same order.

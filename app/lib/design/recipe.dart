@@ -2,46 +2,18 @@ import 'package:flutter/material.dart';
 
 enum CourtBreakpoint { compact, medium, expanded }
 
-/// Layout metrics for a [CourtBreakpoint]. Numbers stay in this file.
+/// Type scale for a [CourtBreakpoint].
 @immutable
 final class CourtRecipe {
-  const CourtRecipe._({
-    required this.inset,
-    required this.gap,
-    required this.titleSize,
-    required this.cardWidth,
-    required this.cardRadius,
-  });
+  const CourtRecipe._({required this.titleSize});
 
-  final double inset;
-  final double gap;
   final double titleSize;
-  final double cardWidth;
-  final double cardRadius;
 
   static CourtRecipe forBreakpoint(CourtBreakpoint breakpoint) {
     return switch (breakpoint) {
-      CourtBreakpoint.compact => const CourtRecipe._(
-        inset: 12,
-        gap: 8,
-        titleSize: 18,
-        cardWidth: 56,
-        cardRadius: 4,
-      ),
-      CourtBreakpoint.medium => const CourtRecipe._(
-        inset: 16,
-        gap: 8,
-        titleSize: 22,
-        cardWidth: 72,
-        cardRadius: 6,
-      ),
-      CourtBreakpoint.expanded => const CourtRecipe._(
-        inset: 24,
-        gap: 12,
-        titleSize: 24,
-        cardWidth: 88,
-        cardRadius: 8,
-      ),
+      CourtBreakpoint.compact => const CourtRecipe._(titleSize: 18),
+      CourtBreakpoint.medium => const CourtRecipe._(titleSize: 22),
+      CourtBreakpoint.expanded => const CourtRecipe._(titleSize: 24),
     };
   }
 

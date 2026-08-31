@@ -3,7 +3,7 @@ import 'package:court_piece/design/table.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
 
-/// Page shell: optional header, clustered body.
+/// Page shell: optional header, clustered body or table.
 class CourtScreen extends StatelessWidget {
   const CourtScreen({super.key, this.header, this.body, this.table})
     : assert((body == null) != (table == null));
@@ -25,16 +25,12 @@ class CourtScreen extends StatelessWidget {
             breakpoint: breakpoint,
             recipe: recipe,
             child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(recipe.inset),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ?header,
-                    if (header != null) SizedBox(height: recipe.gap),
-                    Expanded(child: table ?? body!),
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ?header,
+                  Expanded(child: table ?? body!),
+                ],
               ),
             ),
           );
@@ -54,20 +50,30 @@ class CourtHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = CourtScope.of(context).recipe;
-    final titleStyle = Theme.of(context).textTheme.titleMedium
-        ?.copyWith(fontSize: recipe.titleSize);
-    return Row(
-      children: [
-        Expanded(child: Text(title, style: titleStyle)),
-        if (trailing != null) ...[SizedBox(width: recipe.gap), trailing!],
-      ],
+    final theme = CourtTheme.of(context);
+    final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontSize: recipe.titleSize,
+      color: theme.muted,
+      fontWeight: FontWeight.w400,
+    );
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: recipe.titleSize,
+        vertical: recipe.titleSize * 0.18,
+      ),
+      child: Row(
+        children: [
+          Expanded(child: Text(title, style: titleStyle)),
+          ?trailing,
+        ],
+      ),
     );
   }
 }
 
 enum CourtClusterAxis { vertical, horizontal }
 
-/// Stacked children with recipe gap.
+/// Children share the flex axis equally.
 class CourtCluster extends StatelessWidget {
   const CourtCluster({
     super.key,
@@ -80,23 +86,16 @@ class CourtCluster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gap = CourtScope.of(context).recipe.gap;
     if (children.isEmpty) {
       return const SizedBox.expand();
     }
+    final vertical = axis == CourtClusterAxis.vertical;
     return Flex(
-      direction: axis == CourtClusterAxis.vertical
-          ? Axis.vertical
-          : Axis.horizontal,
-      crossAxisAlignment: axis == CourtClusterAxis.vertical
+      direction: vertical ? Axis.vertical : Axis.horizontal,
+      crossAxisAlignment: vertical
           ? CrossAxisAlignment.stretch
           : CrossAxisAlignment.center,
-      children: [
-        for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) SizedBox(width: gap, height: gap),
-          children[i],
-        ],
-      ],
+      children: [for (final child in children) Expanded(child: child)],
     );
   }
 }
