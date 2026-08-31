@@ -1,4 +1,5 @@
 import 'package:court_piece/design/design.dart';
+import 'package:court_piece/home/home_page.dart';
 import 'package:flutter/material.dart';
 
 class CourtApp extends StatefulWidget {
@@ -36,16 +37,9 @@ class _CourtAppState extends State<CourtApp> {
       themeMode: _mode,
       home: Builder(
         builder: (context) {
-          final dark = _isDark(context);
-          return CourtScreen(
-            body: Center(
-              child: IconButton(
-                key: const ValueKey<String>('theme-toggle'),
-                tooltip: 'Toggle theme',
-                onPressed: () => _toggleTheme(context),
-                icon: Icon(dark ? Icons.light_mode : Icons.dark_mode),
-              ),
-            ),
+          return HomePage(
+            isDark: _isDark(context),
+            onToggleTheme: () => _toggleTheme(context),
           );
         },
       ),

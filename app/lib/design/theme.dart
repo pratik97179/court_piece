@@ -66,6 +66,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
     required this.surface,
     required this.danger,
     required this.inset,
+    required this.gap,
   });
 
   factory CourtTheme.light() =>
@@ -84,6 +85,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       surface: palette.surface,
       danger: palette.danger,
       inset: _TokenSpace.md,
+      gap: _TokenSpace.sm,
     );
   }
 
@@ -95,6 +97,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
   final Color surface;
   final Color danger;
   final double inset;
+  final double gap;
 
   static CourtTheme of(BuildContext context) {
     final theme = Theme.of(context).extension<CourtTheme>();
@@ -162,6 +165,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
     Color? surface,
     Color? danger,
     double? inset,
+    double? gap,
   }) {
     return CourtTheme(
       brightness: brightness ?? this.brightness,
@@ -172,6 +176,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       surface: surface ?? this.surface,
       danger: danger ?? this.danger,
       inset: inset ?? this.inset,
+      gap: gap ?? this.gap,
     );
   }
 
@@ -189,6 +194,7 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       surface: Color.lerp(surface, other.surface, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       inset: lerpDouble(inset, other.inset, t)!,
+      gap: lerpDouble(gap, other.gap, t)!,
     );
   }
 }
