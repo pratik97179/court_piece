@@ -1,0 +1,8 @@
+name: court_piece
+publish_to: none
+environment:
+  sdk: ^3.13.0
+workspace:
+  - packages/engine
+dev_dependencies:
+  lints: ^6.0.0
