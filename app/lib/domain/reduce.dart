@@ -35,7 +35,7 @@ Seat trickWinner(List<Play> plays, Suit trump) {
   var best = plays.first;
   final lead = best.card.suit;
   for (final play in plays.skip(1)) {
-    if (_beats(play.card, best.card, lead: lead, trump: trump)) {
+    if (beats(play.card, best.card, lead: lead, trump: trump)) {
       best = play;
     }
   }
@@ -160,7 +160,7 @@ DealOver? dealOutcome(List<CompletedTrick> completed, Suit trump) {
   return DealOver(trump: trump, winner: winner, court: court);
 }
 
-bool _beats(
+bool beats(
   Card challenger,
   Card incumbent, {
   required Suit lead,
