@@ -30,6 +30,12 @@ final class DealOver extends Phase {
   final bool court;
 }
 
+final class MatchOver extends Phase {
+  const MatchOver({required this.winner});
+
+  final Team winner;
+}
+
 /// One card played into the current trick.
 final class Play {
   const Play({required this.seat, required this.card});
@@ -65,6 +71,10 @@ final class PlayCard extends Intent {
   final Card card;
 }
 
+final class StartDeal extends Intent {
+  const StartDeal();
+}
+
 enum RejectReason { wrongPhase, notYourTurn, cardNotHeld, mustFollowSuit }
 
 sealed class ReduceResult {
@@ -83,6 +93,8 @@ final class Reject extends ReduceResult {
   final RejectReason reason;
 }
 
+const matchCourts = 7;
+
 /// Immutable match snapshot.
 final class GameState {
   const GameState._({
@@ -90,49 +102,60 @@ final class GameState {
     required this.phase,
     required this.toAct,
     required this.completed,
+    required this.seed,
+    required this.northSouthCourts,
+    required this.eastWestCourts,
   });
 
   final Deal deal;
   final Phase phase;
   final Seat toAct;
   final List<CompletedTrick> completed;
+  final int seed;
+  final int northSouthCourts;
+  final int eastWestCourts;
 
-  factory GameState.dealtFive({required int seed, required Seat dealer}) {
+  factory GameState.match({required int seed, Seat? dealer}) {
+    final first =
+        dealer ?? Seat.values[seed.toUnsigned(32) % Seat.values.length];
+    return GameState.dealtFive(seed: seed, dealer: first);
+  }
+
+  factory GameState.dealtFive({
+    required int seed,
+    required Seat dealer,
+    int northSouthCourts = 0,
+    int eastWestCourts = 0,
+  }) {
     final deal = dealFive(deck: shuffledDeck(seed), dealer: dealer);
     return GameState._(
       deal: deal,
       phase: const WaitingTrump(),
       toAct: deal.hakem,
       completed: const [],
+      seed: seed,
+      northSouthCourts: northSouthCourts,
+      eastWestCourts: eastWestCourts,
     );
   }
 
-  factory GameState.playing({
-    required Deal deal,
-    required Suit trump,
-    List<Play> trick = const [],
-    List<CompletedTrick> completed = const [],
+  GameState copyWith({
+    Deal? deal,
+    Phase? phase,
     Seat? toAct,
+    List<CompletedTrick>? completed,
+    int? seed,
+    int? northSouthCourts,
+    int? eastWestCourts,
   }) {
     return GameState._(
-      deal: deal,
-      phase: Playing(trump: trump, trick: trick),
-      toAct: toAct ?? deal.hakem,
-      completed: completed,
-    );
-  }
-
-  factory GameState.over({
-    required Deal deal,
-    required DealOver phase,
-    required List<CompletedTrick> completed,
-    required Seat toAct,
-  }) {
-    return GameState._(
-      deal: deal,
-      phase: phase,
-      toAct: toAct,
-      completed: completed,
+      deal: deal ?? this.deal,
+      phase: phase ?? this.phase,
+      toAct: toAct ?? this.toAct,
+      completed: completed ?? this.completed,
+      seed: seed ?? this.seed,
+      northSouthCourts: northSouthCourts ?? this.northSouthCourts,
+      eastWestCourts: eastWestCourts ?? this.eastWestCourts,
     );
   }
 }

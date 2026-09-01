@@ -19,3 +19,12 @@ enum Seat {
     west => south,
   };
 }
+
+/// Losing team deals so the winners keep the hakem seat.
+Seat nextDealer(Seat previous, Team losers) {
+  var seat = previous.next;
+  while (seat.team != losers) {
+    seat = seat.next;
+  }
+  return seat;
+}

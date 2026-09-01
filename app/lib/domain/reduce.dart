@@ -8,6 +8,7 @@ ReduceResult reduce(GameState state, Intent intent) {
   return switch (intent) {
     CallTrump(:final seat, :final suit) => _callTrump(state, seat, suit),
     PlayCard(:final seat, :final card) => _playCard(state, seat, card),
+    StartDeal() => _startDeal(state),
   };
 }
 
@@ -48,7 +49,14 @@ ReduceResult _callTrump(GameState state, Seat seat, Suit suit) {
   if (seat != state.toAct || seat != state.deal.hakem) {
     return const Reject(RejectReason.notYourTurn);
   }
-  return Accept(GameState.playing(deal: dealRest(state.deal), trump: suit));
+  return Accept(
+    state.copyWith(
+      deal: dealRest(state.deal),
+      phase: Playing(trump: suit),
+      toAct: state.deal.hakem,
+      completed: const [],
+    ),
+  );
 }
 
 ReduceResult _playCard(GameState state, Seat seat, Card card) {
@@ -69,11 +77,9 @@ ReduceResult _playCard(GameState state, Seat seat, Card card) {
   final deal = state.deal.without(seat, card);
   if (trick.length < 4) {
     return Accept(
-      GameState.playing(
+      state.copyWith(
         deal: deal,
-        trump: phase.trump,
-        trick: trick,
-        completed: state.completed,
+        phase: Playing(trump: phase.trump, trick: trick),
         toAct: seat.next,
       ),
     );
@@ -84,22 +90,53 @@ ReduceResult _playCard(GameState state, Seat seat, Card card) {
     CompletedTrick(winner: winner, plays: trick),
   ];
   final over = dealOutcome(completed, phase.trump);
-  if (over != null) {
+  if (over == null) {
     return Accept(
-      GameState.over(
+      state.copyWith(
         deal: deal,
-        phase: over,
+        phase: Playing(trump: phase.trump),
         completed: completed,
         toAct: winner,
       ),
     );
   }
+  final northSouth =
+      state.northSouthCourts + (over.winner == Team.northSouth ? 1 : 0);
+  final eastWest =
+      state.eastWestCourts + (over.winner == Team.eastWest ? 1 : 0);
+  final matchWon = northSouth >= matchCourts || eastWest >= matchCourts;
   return Accept(
-    GameState.playing(
+    state.copyWith(
       deal: deal,
-      trump: phase.trump,
+      phase: matchWon
+          ? MatchOver(
+              winner: northSouth >= matchCourts
+                  ? Team.northSouth
+                  : Team.eastWest,
+            )
+          : over,
       completed: completed,
       toAct: winner,
+      northSouthCourts: northSouth,
+      eastWestCourts: eastWest,
+    ),
+  );
+}
+
+ReduceResult _startDeal(GameState state) {
+  final phase = state.phase;
+  if (phase is! DealOver) {
+    return const Reject(RejectReason.wrongPhase);
+  }
+  final losers = phase.winner == Team.northSouth
+      ? Team.eastWest
+      : Team.northSouth;
+  return Accept(
+    GameState.dealtFive(
+      seed: state.seed + 1,
+      dealer: nextDealer(state.deal.dealer, losers),
+      northSouthCourts: state.northSouthCourts,
+      eastWestCourts: state.eastWestCourts,
     ),
   );
 }
