@@ -75,10 +75,10 @@ void main() {
 
     expect(trick.top - north.bottom, lessThan(table.height * 0.16));
     expect(hand.top, greaterThan(trick.bottom));
-    expect(hand.top - north.bottom, lessThan(table.height * 0.55));
+    expect(hand.top - north.bottom, lessThan(table.height * 0.65));
   });
 
-  testWidgets('thirteen south cards stay on screen and do not span desktop', (
+  testWidgets('thirteen south cards fan from an upright center by pi/25', (
     tester,
   ) async {
     addTearDown(() async {
@@ -103,26 +103,24 @@ void main() {
     await tester.pumpWidget(
       _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
     );
-    final table = tester.getRect(find.byType(GameTable));
-    final first = tester.getRect(
+    expect(PivotHand.angleAt(index: 6, center: 6), 0);
+    expect(PivotHand.angleAt(index: 5, center: 6), -PivotHand.step);
+    expect(PivotHand.angleAt(index: 7, center: 6), PivotHand.step);
+    expect(PivotHand.angleAt(index: 0, center: 6), -6 * PivotHand.step);
+    expect(PivotHand.angleAt(index: 12, center: 6), 6 * PivotHand.step);
+    final rail = tester.getSize(find.byType(SeatRail));
+    final card = tester.getSize(
       find.byKey(
         const ValueKey<CardArtId>(
-          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+          CardArtId(rank: ArtRank.seven, suit: ArtSuit.hearts),
         ),
       ),
     );
-    final last = tester.getRect(
-      find.byKey(
-        const ValueKey<CardArtId>(
-          CardArtId(rank: ArtRank.two, suit: ArtSuit.hearts),
-        ),
-      ),
-    );
-    expect(first.left, greaterThanOrEqualTo(table.left - 1));
-    expect(last.right, lessThanOrEqualTo(table.right + 1));
+    expect(rail.width, lessThanOrEqualTo(card.width * SeatRail.spreadWidths + 1));
+    expect(rail.height, greaterThan(card.height * 0.5));
   });
 
-  testWidgets('thirteen south cards form a wide rail on desktop', (
+  testWidgets('thirteen south cards share one pivot fan on desktop', (
     tester,
   ) async {
     addTearDown(() async {
@@ -147,23 +145,19 @@ void main() {
     await tester.pumpWidget(
       _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
     );
-    final wide = tester.getRect(find.byType(GameTable));
-    final wideFirst = tester.getRect(
+    final layout = PivotHand.layout(count: 12, cardWidth: 80);
+    expect(layout.centerIndex, 6);
+    expect(PivotHand.angleAt(index: 0, center: 6), -6 * PivotHand.step);
+    expect(PivotHand.angleAt(index: 11, center: 6), 5 * PivotHand.step);
+    final rail = tester.getSize(find.byType(SeatRail));
+    final card = tester.getSize(
       find.byKey(
         const ValueKey<CardArtId>(
-          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+          CardArtId(rank: ArtRank.seven, suit: ArtSuit.hearts),
         ),
       ),
     );
-    final wideLast = tester.getRect(
-      find.byKey(
-        const ValueKey<CardArtId>(
-          CardArtId(rank: ArtRank.two, suit: ArtSuit.hearts),
-        ),
-      ),
-    );
-    expect(wideLast.right - wideFirst.left, lessThan(wide.width * 0.78));
-    expect(wideLast.right - wideFirst.left, greaterThan(wide.width * 0.38));
+    expect(rail.width, lessThanOrEqualTo(card.width * SeatRail.spreadWidths + 1));
   });
 
   testWidgets('rebuilds when the session view changes', (tester) async {
@@ -246,7 +240,9 @@ void main() {
     expect(find.byKey(const ValueKey<String>('east-count')), findsOneWidget);
   });
 
-  testWidgets('south hand arcs strongly on mobile', (tester) async {
+  testWidgets('south hand pivots from the upright center on mobile', (
+    tester,
+  ) async {
     addTearDown(() async {
       await tester.binding.setSurfaceSize(null);
     });
@@ -283,10 +279,12 @@ void main() {
         ),
       ),
     );
-    expect(middle.top, lessThan(edge.top - 6));
+    expect((edge.center.dx - middle.center.dx).abs(), greaterThan(8));
   });
 
-  testWidgets('south hand keeps a gentle arc on desktop', (tester) async {
+  testWidgets('south hand pivots from the upright center on desktop', (
+    tester,
+  ) async {
     addTearDown(() async {
       await tester.binding.setSurfaceSize(null);
     });
@@ -309,22 +307,29 @@ void main() {
     await tester.pumpWidget(
       _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
     );
-    final wideEdge = tester.getRect(
+    final left = tester.getRect(
       find.byKey(
         const ValueKey<CardArtId>(
           CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
         ),
       ),
     );
-    final wideMiddle = tester.getRect(
+    final right = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.two, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final center = tester.getRect(
       find.byKey(
         const ValueKey<CardArtId>(
           CardArtId(rank: ArtRank.seven, suit: ArtSuit.hearts),
         ),
       ),
     );
-    expect(wideMiddle.top, lessThan(wideEdge.top - 2));
-    expect((wideMiddle.top - wideEdge.top).abs(), lessThan(18));
+    expect(left.center.dx, lessThan(center.center.dx));
+    expect(right.center.dx, greaterThan(center.center.dx));
   });
 
   testWidgets('trump overlay is hidden while playing', (tester) async {
@@ -362,7 +367,7 @@ void main() {
       ),
     );
     expect(scrim.color, CourtTheme.light().felt);
-    expect(scrim.color!.a, 1);
+    expect(scrim.color.a, 1);
 
     await tester.tap(find.byKey(const ValueKey<String>('trump-hearts')));
     await tester.pump();
@@ -418,7 +423,7 @@ void main() {
         ),
       ),
     );
-    final dimmed = tester.widget<PlayingCard>(
+    final idle = tester.widget<PlayingCard>(
       find.byKey(
         const ValueKey<CardArtId>(
           CardArtId(rank: ArtRank.king, suit: ArtSuit.diamonds),
@@ -426,25 +431,13 @@ void main() {
       ),
     );
     expect(playable.presence, CardPresence.playable);
-    expect(dimmed.presence, CardPresence.dimmed);
+    expect(idle.presence, CardPresence.idle);
 
-    final aceFinder = find.byKey(
-      const ValueKey<CardArtId>(
-        CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
-      ),
-    );
-    final kingFinder = find.byKey(
-      const ValueKey<CardArtId>(
-        CardArtId(rank: ArtRank.king, suit: ArtSuit.diamonds),
-      ),
-    );
-    await tester.tapAt(
-      _cardPoint(tester, kingFinder, const Offset(0.88, 0.55)),
-    );
+    idle.onTap!.call();
     await tester.pump();
     expect(session.intents, isEmpty);
 
-    await tester.tapAt(_cardPoint(tester, aceFinder, const Offset(0.12, 0.55)));
+    playable.onTap!.call();
     await tester.pump();
     expect(session.intents, hasLength(1));
     expect(session.intents.single, isA<PlayCardIntent>());

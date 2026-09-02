@@ -10,11 +10,11 @@ import 'package:court_piece/domain/seat.dart';
 /// South is human. North, east, and west use [CpuStrategy].
 final class LocalCpuSession implements PausableGameSession {
   LocalCpuSession({
-    required CpuStrategy cpu,
+    required this._cpu,
     required int seed,
     Seat? dealer,
     this.cpuPause = Duration.zero,
-  }) : _cpu = cpu {
+  }) {
     _state = GameState.match(seed: seed, dealer: dealer);
     _advanceCpus();
   }

@@ -375,7 +375,7 @@ class _TablePageState extends State<TablePage> {
     }
     return view.legalSouth.contains(card)
         ? CardPresence.playable
-        : CardPresence.dimmed;
+        : CardPresence.idle;
   }
 
   bool _southPlays(TableView view) {

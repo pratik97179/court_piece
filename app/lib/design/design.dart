@@ -8,3 +8,4 @@ export 'seat_rail.dart';
 export 'opponent_seat.dart';
 export 'card_fan.dart';
 export 'score.dart';
+export 'pivot_hand.dart';

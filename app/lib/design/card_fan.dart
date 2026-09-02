@@ -70,13 +70,10 @@ abstract final class FanLayout {
     final h = spec.cardHeight;
     final mid = (count - 1) / 2;
     final preferred = w * (1 - spec.overlap);
-    final tightest = w * 0.14;
     var step = preferred;
     if (count > 1 && spec.maxAlong.isFinite) {
       final available = (spec.maxAlong - w) / (count - 1);
-      step = available < preferred
-          ? available.clamp(tightest, preferred)
-          : preferred;
+      step = available < preferred ? math.max(0.0, available) : preferred;
     }
     final arcPx = h * spec.arc;
     return [

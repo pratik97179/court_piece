@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:court_piece/design/card_fan.dart';
 import 'package:court_piece/design/motion.dart';
+import 'package:court_piece/design/pivot_hand.dart';
 import 'package:court_piece/design/recipe.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:court_piece/domain/seat.dart';
@@ -55,14 +56,12 @@ final class TableModule {
   double get trickHeight => trickWidth / aspect;
 
   double get southHeight {
-    final spec = FanSpec(
-      cardWidth: handWidth,
-      overlap: handOverlap,
-      arc: handArc,
-      tilt: handTilt,
-      maxAlong: handFanAlong,
-    );
-    return FanLayout.measure(count: handCount, spec: spec).height + 10;
+    final layout = PivotHand.layout(count: handCount, cardWidth: handWidth);
+    if (layout.width <= 0) {
+      return handHeight + 10;
+    }
+    final fit = math.min(1.0, handFanAlong / layout.width);
+    return layout.height * fit + 10;
   }
 
   double get northSeatHeight {
@@ -119,18 +118,6 @@ final class TableModule {
   ) {
     final width = constraints.maxWidth;
     final height = constraints.maxHeight;
-    final handOverlap = switch (breakpoint) {
-      CourtBreakpoint.compact => 0.6,
-      CourtBreakpoint.medium => 0.5,
-      CourtBreakpoint.expanded => 0.44,
-    };
-    final handFanAlong = switch (breakpoint) {
-      CourtBreakpoint.compact => width * 0.94,
-      CourtBreakpoint.medium => math.min(width * 0.68, 620.0),
-      CourtBreakpoint.expanded => math.min(width * 0.74, 860.0),
-    };
-    final span = 1 + (handCount - 1) * (1 - handOverlap);
-    var handWidth = handFanAlong / span;
     final handHCap =
         height *
         switch (breakpoint) {
@@ -138,9 +125,17 @@ final class TableModule {
           CourtBreakpoint.medium => 0.2,
           CourtBreakpoint.expanded => 0.2,
         };
-    if (handWidth / aspect > handHCap) {
-      handWidth = handHCap * aspect;
+    var handWidth = handHCap * aspect;
+    final boardW = math.max(1.0, width - 2 * switch (breakpoint) {
+      CourtBreakpoint.compact => 8.0,
+      CourtBreakpoint.medium => 16.0,
+      CourtBreakpoint.expanded => 24.0,
+    });
+    final alongCap = boardW * 0.92;
+    if (handWidth * PivotHand.spreadWidths > alongCap) {
+      handWidth = alongCap / PivotHand.spreadWidths;
     }
+    final handFanAlong = handWidth * PivotHand.spreadWidths;
     final trickWidth =
         handWidth *
         switch (breakpoint) {
@@ -161,21 +156,25 @@ final class TableModule {
         CourtBreakpoint.medium => 28.0,
         CourtBreakpoint.expanded => 30.0,
       },
-      handOverlap: handOverlap,
+      handOverlap: switch (breakpoint) {
+        CourtBreakpoint.compact => 0.82,
+        CourtBreakpoint.medium => 0.8,
+        CourtBreakpoint.expanded => 0.78,
+      },
       opponentOverlap: switch (breakpoint) {
         CourtBreakpoint.compact => 0.8,
         CourtBreakpoint.medium => 0.78,
         CourtBreakpoint.expanded => 0.76,
       },
       handArc: switch (breakpoint) {
-        CourtBreakpoint.compact => 0.32,
-        CourtBreakpoint.medium => 0.14,
-        CourtBreakpoint.expanded => 0.11,
+        CourtBreakpoint.compact => 0.28,
+        CourtBreakpoint.medium => 0.22,
+        CourtBreakpoint.expanded => 0.18,
       },
       handTilt: switch (breakpoint) {
-        CourtBreakpoint.compact => 0.15,
-        CourtBreakpoint.medium => 0.09,
-        CourtBreakpoint.expanded => 0.07,
+        CourtBreakpoint.compact => 0.22,
+        CourtBreakpoint.medium => 0.18,
+        CourtBreakpoint.expanded => 0.16,
       },
       avatarSize: switch (breakpoint) {
         CourtBreakpoint.compact => 22.0,

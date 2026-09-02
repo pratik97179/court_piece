@@ -50,17 +50,14 @@ class PlayingCard extends StatelessWidget {
   }
 
   Widget _face(BuildContext context, double width, double height) {
-    final theme = CourtTheme.of(context);
-    final radius = BorderRadius.circular(width * 0.08);
-    final dimmed = presence == CardPresence.dimmed;
     final selected = presence == CardPresence.selected;
     final face = presence == CardPresence.facedown
-        ? _CardBack(radius: radius)
+        ? const _CardBack()
         : Image.asset(art.faceAsset(view.id), fit: BoxFit.contain);
     final liftTo = selected
         ? 1.0
         : presence == CardPresence.playable
-        ? 0.55
+        ? 0.45
         : 0.0;
     return SizedBox(
       width: width,
@@ -72,42 +69,9 @@ class PlayingCard extends StatelessWidget {
           motion: CourtMotion.play(context),
           value: liftTo,
           builder: (context, lift, _) {
-            return SingleMotionBuilder(
-              motion: CourtMotion.play(context),
-              value: dimmed ? 1.0 : 0.0,
-              builder: (context, dim, _) {
-                return Transform.translate(
-                  offset: Offset(0, -16 * lift),
-                  transformHitTests: false,
-                  child: Transform.scale(
-                    scale: 1 + (0.025 * lift),
-                    child: Material(
-                      color: theme.surface,
-                      elevation: 1 + (2 * lift),
-                      shadowColor: theme.ink.withValues(alpha: 0.28),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: radius,
-                        side: BorderSide(
-                          color: theme.ink.withValues(alpha: 0.06),
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Positioned.fill(child: face),
-                          if (dim > 0.01)
-                            Positioned.fill(
-                              child: ColoredBox(
-                                color: theme.felt.withValues(alpha: 0.4 * dim),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+            return Transform.translate(
+              offset: Offset(0, -36 * lift),
+              child: Transform.scale(scale: 1 + (0.03 * lift), child: face),
             );
           },
         ),
@@ -117,19 +81,14 @@ class PlayingCard extends StatelessWidget {
 }
 
 class _CardBack extends StatelessWidget {
-  const _CardBack({required this.radius});
-
-  final BorderRadius radius;
+  const _CardBack();
 
   @override
   Widget build(BuildContext context) {
     final theme = CourtTheme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(color: theme.surface, borderRadius: radius),
-      child: CustomPaint(
-        painter: _BackPainter(theme.accent, theme.ink),
-        child: const SizedBox.expand(),
-      ),
+    return CustomPaint(
+      painter: _BackPainter(theme.accent, theme.ink),
+      child: const SizedBox.expand(),
     );
   }
 }
