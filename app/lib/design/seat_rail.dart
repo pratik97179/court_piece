@@ -1,18 +1,12 @@
-import 'package:court_piece/design/playing_card.dart';
+import 'package:court_piece/design/card_fan.dart';
 import 'package:court_piece/design/table.dart';
 import 'package:flutter/material.dart';
 
-/// Overlapping cards along one seat. The local hand gets a shallow fan.
+/// Local player's hand as a held fan. Mobile and desktop use different curves.
 class SeatRail extends StatelessWidget {
-  const SeatRail({
-    super.key,
-    required this.cards,
-    this.axis = Axis.horizontal,
-    this.scale = CardScale.opponent,
-  });
+  const SeatRail({super.key, required this.cards, this.scale = CardScale.hand});
 
   final List<Widget> cards;
-  final Axis axis;
   final CardScale scale;
 
   @override
@@ -20,38 +14,47 @@ class SeatRail extends StatelessWidget {
     if (cards.isEmpty) {
       return const SizedBox.shrink();
     }
-    final module = TableScope.maybeOf(context);
-    final width = module?.widthFor(scale) ?? 56;
-    final height = width / PlayingCard.aspect;
-    final along = axis == Axis.horizontal ? width : height;
-    final overlap = module?.overlapFor(scale) ?? 0.55;
-    final fan = scale == CardScale.hand && axis == Axis.horizontal;
-
+    final module = TableScope.maybeOf(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxAlong = axis == Axis.horizontal
+        final maxAlong = constraints.maxWidth.isFinite
             ? constraints.maxWidth
-            : constraints.maxHeight;
-        final step = _step(
-          count: cards.length,
-          along: along,
-          maxAlong: maxAlong,
+            : module.handFanAlong;
+        var overlap = module.handOverlap;
+        var spec = FanSpec(
+          cardWidth: module.widthFor(scale),
           overlap: overlap,
+          arc: module.handArc,
+          tilt: module.handTilt,
+          maxAlong: maxAlong,
+          pivot: Alignment.bottomCenter,
         );
-        final extent = along + (cards.length - 1) * step;
-        final arc = fan ? height * 0.1 : 0.0;
-        final mid = (cards.length - 1) / 2;
+        var bounds = FanLayout.measure(count: cards.length, spec: spec);
+        for (var i = 0; i < 10 && bounds.width > maxAlong; i++) {
+          overlap = (overlap + 0.04).clamp(0.0, 0.84);
+          spec = FanSpec(
+            cardWidth: module.widthFor(scale),
+            overlap: overlap,
+            arc: module.handArc,
+            tilt: module.handTilt,
+            maxAlong: maxAlong,
+            pivot: Alignment.bottomCenter,
+          );
+          bounds = FanLayout.measure(count: cards.length, spec: spec);
+        }
+        final slots = FanLayout.slots(count: cards.length, spec: spec);
         return SizedBox(
-          width: axis == Axis.horizontal ? extent : width,
-          height: axis == Axis.horizontal ? height + arc : extent,
+          width: bounds.width,
+          height: bounds.height,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               for (var i = 0; i < cards.length; i++)
-                Positioned(
-                  left: axis == Axis.horizontal ? i * step : 0,
-                  top: axis == Axis.vertical ? i * step : _arcDrop(i, mid, arc),
-                  child: _tilt(i, mid, fan, cards[i]),
+                _SouthCard(
+                  slot: slots[i],
+                  spec: spec,
+                  bounds: bounds,
+                  child: cards[i],
                 ),
             ],
           ),
@@ -59,46 +62,38 @@ class SeatRail extends StatelessWidget {
       },
     );
   }
+}
 
-  static double _arcDrop(int index, double mid, double arc) {
-    if (arc == 0 || mid == 0) {
-      return 0;
-    }
-    final t = (index - mid) / mid;
-    return t.abs() * arc;
-  }
+class _SouthCard extends StatelessWidget {
+  const _SouthCard({
+    required this.slot,
+    required this.spec,
+    required this.bounds,
+    required this.child,
+  });
 
-  static Widget _tilt(int index, double mid, bool fan, Widget child) {
-    if (!fan || mid == 0) {
-      return child;
-    }
-    final t = (index - mid) / mid;
-    return Transform.rotate(
-      angle: t * 0.055,
-      alignment: Alignment.bottomCenter,
-      child: child,
+  final FanSlot slot;
+  final FanSpec spec;
+  final FanBounds bounds;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final origin = FanLayout.frameOrigin(
+      slot: slot,
+      spec: spec,
+      bounds: bounds,
     );
-  }
-
-  static double _step({
-    required int count,
-    required double along,
-    required double maxAlong,
-    required double overlap,
-  }) {
-    if (count < 2) {
-      return 0;
-    }
-    final available = (maxAlong - along) / (count - 1);
-    final preferred = along * (1 - overlap);
-    final loosest = along * 0.78;
-    final tightest = along * 0.24;
-    if (available.isInfinite || available.isNaN) {
-      return preferred;
-    }
-    if (available < preferred) {
-      return available.clamp(tightest, preferred);
-    }
-    return available.clamp(preferred, loosest);
+    return Positioned(
+      left: origin.left,
+      top: origin.top,
+      width: spec.cardWidth,
+      height: spec.cardHeight,
+      child: Transform.rotate(
+        angle: slot.angle,
+        alignment: spec.pivot,
+        child: child,
+      ),
+    );
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:court_piece/application/cpu_strategy.dart';
 import 'package:court_piece/application/game_session.dart';
 import 'package:court_piece/domain/card.dart';
@@ -6,11 +8,12 @@ import 'package:court_piece/domain/reduce.dart';
 import 'package:court_piece/domain/seat.dart';
 
 /// South is human. North, east, and west use [CpuStrategy].
-final class LocalCpuSession implements GameSession {
+final class LocalCpuSession implements PausableGameSession {
   LocalCpuSession({
     required CpuStrategy cpu,
     required int seed,
     Seat? dealer,
+    this.cpuPause = Duration.zero,
   }) : _cpu = cpu {
     _state = GameState.match(seed: seed, dealer: dealer);
     _advanceCpus();
@@ -18,12 +21,15 @@ final class LocalCpuSession implements GameSession {
 
   static const _human = Seat.south;
 
+  final Duration cpuPause;
   final CpuStrategy _cpu;
   late GameState _state;
   late TableView _view;
   final _listeners = <void Function()>[];
   final _events = <TableEvent>[];
   var _disposed = false;
+  var _actingPaused = false;
+  Timer? _cpuTimer;
 
   @override
   TableView get view => _view;
@@ -33,6 +39,7 @@ final class LocalCpuSession implements GameSession {
     if (_disposed) {
       return;
     }
+    _cpuTimer?.cancel();
     final mapped = switch (intent) {
       CallTrumpIntent(:final suit) => CallTrump(seat: _human, suit: suit),
       PlayCardIntent(:final card) => PlayCard(seat: _human, card: card),
@@ -64,24 +71,65 @@ final class LocalCpuSession implements GameSession {
   }
 
   @override
+  void setActingPaused(bool paused) {
+    if (_actingPaused == paused) {
+      return;
+    }
+    _actingPaused = paused;
+    if (!paused) {
+      _advanceCpus();
+      _notify();
+    }
+  }
+
+  @override
   void dispose() {
     _disposed = true;
+    _cpuTimer?.cancel();
     _listeners.clear();
     _events.clear();
   }
 
   void _advanceCpus() {
+    if (!_actingPaused) {
+      _runCpus(limit: cpuPause == Duration.zero ? 64 : 1);
+    }
+    _view = _toView(_state);
+    if (_actingPaused) {
+      return;
+    }
+    if (cpuPause > Duration.zero && _cpuShouldAct()) {
+      _cpuTimer?.cancel();
+      _cpuTimer = Timer(cpuPause, () {
+        if (_disposed) {
+          return;
+        }
+        _advanceCpus();
+        _notify();
+      });
+    }
+  }
+
+  bool _cpuShouldAct() {
+    final phase = _state.phase;
+    if (phase is WaitingTrump && _state.toAct != _human) {
+      return true;
+    }
+    return phase is Playing && _state.toAct != _human;
+  }
+
+  void _runCpus({required int limit}) {
     var guard = 0;
-    while (guard++ < 64) {
+    while (guard++ < limit && _cpuShouldAct()) {
       final phase = _state.phase;
-      if (phase is WaitingTrump && _state.toAct != _human) {
+      if (phase is WaitingTrump) {
         final suit = _cpu.pickTrump(_state.deal.hand(_state.toAct));
         if (!_apply(CallTrump(seat: _state.toAct, suit: suit))) {
           break;
         }
         continue;
       }
-      if (phase is Playing && _state.toAct != _human) {
+      if (phase is Playing) {
         final card = _cpu.pickCard(
           legal: legalPlays(_state, _state.toAct),
           trump: phase.trump,
@@ -90,24 +138,38 @@ final class LocalCpuSession implements GameSession {
         if (!_apply(PlayCard(seat: _state.toAct, card: card))) {
           break;
         }
-        continue;
       }
-      break;
     }
-    _view = _toView(_state);
   }
 
   bool _apply(Intent intent) {
-    final before = _state.phase;
+    final before = _state;
     switch (reduce(_state, intent)) {
       case Accept(:final state):
         _state = state;
-        _emitPhaseEvents(before, state.phase);
+        _emitTrickWon(before, state);
+        _emitPhaseEvents(before.phase, state.phase);
         return true;
       case Reject(:final reason):
         _events.add(TableRejected(_toReject(reason)));
         return false;
     }
+  }
+
+  void _emitTrickWon(GameState before, GameState after) {
+    if (after.completed.length <= before.completed.length) {
+      return;
+    }
+    final trick = after.completed.last;
+    _events.add(
+      TableTrickWon(
+        winner: trick.winner,
+        plays: [
+          for (final play in trick.plays)
+            TablePlay(seat: play.seat, card: play.card),
+        ],
+      ),
+    );
   }
 
   void _emitPhaseEvents(Phase before, Phase after) {

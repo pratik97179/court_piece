@@ -5,7 +5,7 @@ import 'package:court_piece/design/design.dart';
 import 'package:court_piece/home/home_page.dart';
 import 'package:court_piece/infrastructure/heuristic_cpu.dart';
 import 'package:court_piece/infrastructure/local_cpu_session.dart';
-import 'package:court_piece/infrastructure/svg_card_art.dart';
+import 'package:court_piece/infrastructure/png_card_art.dart';
 import 'package:court_piece/table/table_page.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +20,7 @@ class CourtApp extends StatefulWidget {
 
 class _CourtAppState extends State<CourtApp> {
   ThemeMode _mode = ThemeMode.system;
-  final _art = const SvgCardArt();
+  final _art = const PngCardArt();
 
   bool _isDark(BuildContext context) {
     return switch (_mode) {
@@ -62,6 +62,8 @@ class _CourtAppState extends State<CourtApp> {
       theme: CourtTheme.light().asMaterial(),
       darkTheme: CourtTheme.dark().asMaterial(),
       themeMode: _mode,
+      themeAnimationDuration: CourtMotion.theme,
+      themeAnimationCurve: Curves.easeInOutCubic,
       home: Builder(
         builder: (context) {
           return HomePage(

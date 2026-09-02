@@ -3,7 +3,7 @@ import 'package:court_piece/application/game_session.dart';
 import 'package:court_piece/design/design.dart';
 import 'package:court_piece/domain/card.dart';
 import 'package:court_piece/domain/seat.dart';
-import 'package:court_piece/infrastructure/svg_card_art.dart';
+import 'package:court_piece/infrastructure/png_card_art.dart';
 import 'package:court_piece/table/table_page.dart';
 import 'package:flutter/material.dart' hide Card;
 import 'package:flutter_test/flutter_test.dart';
@@ -50,7 +50,7 @@ void main() {
     }
   });
 
-  testWidgets('north sits near the trick and the hand sits near the bottom', (
+  testWidgets('north sits near the trick and the hand sits under the table', (
     tester,
   ) async {
     addTearDown(() async {
@@ -58,15 +58,12 @@ void main() {
     });
     await tester.binding.setSurfaceSize(const Size(390, 800));
     await tester.pumpWidget(_app(_FakeSession(_demoView())));
+    await tester.pumpAndSettle();
 
     final table = tester.getRect(find.byType(GameTable));
     final north = tester.getRect(find.byKey(const ValueKey<String>('north-0')));
     final trick = tester.getRect(
-      find.byKey(
-        const ValueKey<CardArtId>(
-          CardArtId(rank: ArtRank.three, suit: ArtSuit.hearts),
-        ),
-      ),
+      find.byKey(const ValueKey<String>('well-north-3H')),
     );
     final hand = tester.getRect(
       find.byKey(
@@ -77,13 +74,103 @@ void main() {
     );
 
     expect(trick.top - north.bottom, lessThan(table.height * 0.16));
-    expect(table.bottom - hand.bottom, lessThan(40));
+    expect(hand.top, greaterThan(trick.bottom));
+    expect(hand.top - north.bottom, lessThan(table.height * 0.55));
+  });
+
+  testWidgets('thirteen south cards stay on screen and do not span desktop', (
+    tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    const thirteen = [
+      Card(rank: Rank.ace, suit: Suit.hearts),
+      Card(rank: Rank.king, suit: Suit.hearts),
+      Card(rank: Rank.queen, suit: Suit.hearts),
+      Card(rank: Rank.jack, suit: Suit.hearts),
+      Card(rank: Rank.ten, suit: Suit.hearts),
+      Card(rank: Rank.nine, suit: Suit.hearts),
+      Card(rank: Rank.eight, suit: Suit.hearts),
+      Card(rank: Rank.seven, suit: Suit.hearts),
+      Card(rank: Rank.six, suit: Suit.hearts),
+      Card(rank: Rank.five, suit: Suit.hearts),
+      Card(rank: Rank.four, suit: Suit.hearts),
+      Card(rank: Rank.three, suit: Suit.hearts),
+      Card(rank: Rank.two, suit: Suit.hearts),
+    ];
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
+    );
+    final table = tester.getRect(find.byType(GameTable));
+    final first = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final last = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.two, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    expect(first.left, greaterThanOrEqualTo(table.left - 1));
+    expect(last.right, lessThanOrEqualTo(table.right + 1));
+  });
+
+  testWidgets('thirteen south cards form a wide rail on desktop', (
+    tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    const thirteen = [
+      Card(rank: Rank.ace, suit: Suit.hearts),
+      Card(rank: Rank.king, suit: Suit.hearts),
+      Card(rank: Rank.queen, suit: Suit.hearts),
+      Card(rank: Rank.jack, suit: Suit.hearts),
+      Card(rank: Rank.ten, suit: Suit.hearts),
+      Card(rank: Rank.nine, suit: Suit.hearts),
+      Card(rank: Rank.eight, suit: Suit.hearts),
+      Card(rank: Rank.seven, suit: Suit.hearts),
+      Card(rank: Rank.six, suit: Suit.hearts),
+      Card(rank: Rank.five, suit: Suit.hearts),
+      Card(rank: Rank.four, suit: Suit.hearts),
+      Card(rank: Rank.three, suit: Suit.hearts),
+      Card(rank: Rank.two, suit: Suit.hearts),
+    ];
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(
+      _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
+    );
+    final wide = tester.getRect(find.byType(GameTable));
+    final wideFirst = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final wideLast = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.two, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    expect(wideLast.right - wideFirst.left, lessThan(wide.width * 0.78));
+    expect(wideLast.right - wideFirst.left, greaterThan(wide.width * 0.38));
   });
 
   testWidgets('rebuilds when the session view changes', (tester) async {
     final session = _FakeSession(_demoView());
     await tester.pumpWidget(_app(session));
-    expect(find.byType(SeatRail), findsNWidgets(4));
+    expect(find.byType(SeatRail), findsOneWidget);
+    expect(find.byType(OpponentSeat), findsNWidgets(3));
     expect(
       find.byKey(
         const ValueKey<CardArtId>(
@@ -110,23 +197,375 @@ void main() {
     );
     expect(find.byKey(const ValueKey<String>('north-3')), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('north-4')), findsNothing);
+    expect(find.byKey(const ValueKey<String>('north-count')), findsOneWidget);
+  });
+
+  testWidgets('opponent fans stay compact and spread like real hands', (
+    tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(
+        _FakeSession(
+          _demoView(
+            northCount: 13,
+            westCount: 13,
+            eastCount: 13,
+            trick: const [],
+          ),
+        ),
+      ),
+    );
+    final table = tester.getRect(find.byType(GameTable));
+    final first = tester.getRect(find.byKey(const ValueKey<String>('north-0')));
+    final last = tester.getRect(find.byKey(const ValueKey<String>('north-12')));
+    expect(last.right - first.left, lessThan(table.width * 0.32));
+    expect(last.right - first.left, greaterThan(first.width * 1.4));
+    expect(
+      first.width,
+      lessThan(tester.getSize(find.byType(SeatRail)).width * 0.5),
+    );
+    final westLow = tester.getRect(find.byKey(const ValueKey<String>('west-0')));
+    final westHigh = tester.getRect(
+      find.byKey(const ValueKey<String>('west-12')),
+    );
+    expect((westHigh.center.dy - westLow.center.dy).abs(), greaterThan(24));
+    expect((westHigh.center.dx - westLow.center.dx).abs(), lessThan(20));
+    expect(find.byKey(const ValueKey<String>('north-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('north-count')), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey<String>('north-count')))
+          .data,
+      '13',
+    );
+    expect(find.byKey(const ValueKey<String>('west-avatar')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('east-count')), findsOneWidget);
+  });
+
+  testWidgets('south hand arcs strongly on mobile', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    const thirteen = [
+      Card(rank: Rank.ace, suit: Suit.hearts),
+      Card(rank: Rank.king, suit: Suit.hearts),
+      Card(rank: Rank.queen, suit: Suit.hearts),
+      Card(rank: Rank.jack, suit: Suit.hearts),
+      Card(rank: Rank.ten, suit: Suit.hearts),
+      Card(rank: Rank.nine, suit: Suit.hearts),
+      Card(rank: Rank.eight, suit: Suit.hearts),
+      Card(rank: Rank.seven, suit: Suit.hearts),
+      Card(rank: Rank.six, suit: Suit.hearts),
+      Card(rank: Rank.five, suit: Suit.hearts),
+      Card(rank: Rank.four, suit: Suit.hearts),
+      Card(rank: Rank.three, suit: Suit.hearts),
+      Card(rank: Rank.two, suit: Suit.hearts),
+    ];
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
+    );
+    final edge = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final middle = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.seven, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    expect(middle.top, lessThan(edge.top - 6));
+  });
+
+  testWidgets('south hand keeps a gentle arc on desktop', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    const thirteen = [
+      Card(rank: Rank.ace, suit: Suit.hearts),
+      Card(rank: Rank.king, suit: Suit.hearts),
+      Card(rank: Rank.queen, suit: Suit.hearts),
+      Card(rank: Rank.jack, suit: Suit.hearts),
+      Card(rank: Rank.ten, suit: Suit.hearts),
+      Card(rank: Rank.nine, suit: Suit.hearts),
+      Card(rank: Rank.eight, suit: Suit.hearts),
+      Card(rank: Rank.seven, suit: Suit.hearts),
+      Card(rank: Rank.six, suit: Suit.hearts),
+      Card(rank: Rank.five, suit: Suit.hearts),
+      Card(rank: Rank.four, suit: Suit.hearts),
+      Card(rank: Rank.three, suit: Suit.hearts),
+      Card(rank: Rank.two, suit: Suit.hearts),
+    ];
+    await tester.binding.setSurfaceSize(const Size(1200, 800));
+    await tester.pumpWidget(
+      _app(_FakeSession(_demoView(south: thirteen, trick: const []))),
+    );
+    final wideEdge = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final wideMiddle = tester.getRect(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.seven, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    expect(wideMiddle.top, lessThan(wideEdge.top - 2));
+    expect((wideMiddle.top - wideEdge.top).abs(), lessThan(18));
+  });
+
+  testWidgets('trump overlay is hidden while playing', (tester) async {
+    await tester.pumpWidget(_app(_FakeSession(_demoView())));
+    expect(find.byType(CourtOverlay), findsNothing);
+    expect(find.text('Name trump'), findsNothing);
+  });
+
+  testWidgets('south hakem sees trump overlay and can call hearts', (
+    tester,
+  ) async {
+    final session = _FakeSession(
+      _demoView(
+        phase: TablePhase.waitingTrump,
+        toAct: Seat.south,
+        trump: null,
+        south: const [
+          Card(rank: Rank.ace, suit: Suit.hearts),
+          Card(rank: Rank.king, suit: Suit.diamonds),
+          Card(rank: Rank.queen, suit: Suit.spades),
+          Card(rank: Rank.jack, suit: Suit.hearts),
+          Card(rank: Rank.nine, suit: Suit.spades),
+        ],
+        trick: const [],
+      ),
+    );
+    await tester.pumpWidget(_app(session));
+    expect(find.byType(CourtOverlay), findsOneWidget);
+    expect(find.text('Name trump'), findsOneWidget);
+    expect(find.byType(GameTable), findsOneWidget);
+    final scrim = tester.widget<ColoredBox>(
+      find.descendant(
+        of: find.byType(CourtOverlay),
+        matching: find.byType(ColoredBox),
+      ),
+    );
+    expect(scrim.color, CourtTheme.light().felt);
+    expect(scrim.color!.a, 1);
+
+    await tester.tap(find.byKey(const ValueKey<String>('trump-hearts')));
+    await tester.pump();
+
+    expect(session.intents, hasLength(1));
+    expect(session.intents.single, isA<CallTrumpIntent>());
+    expect((session.intents.single as CallTrumpIntent).suit, Suit.hearts);
+  });
+
+  testWidgets('trump overlay stays off when south is not hakem', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _FakeSession(
+          _demoView(
+            phase: TablePhase.waitingTrump,
+            toAct: Seat.east,
+            trump: null,
+            trick: const [],
+          ),
+        ),
+      ),
+    );
+    expect(find.byType(CourtOverlay), findsNothing);
+  });
+
+  testWidgets('tap on a legal south card sends playCard', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    const aceHearts = Card(rank: Rank.ace, suit: Suit.hearts);
+    const kingDiamonds = Card(rank: Rank.king, suit: Suit.diamonds);
+    final session = _FakeSession(
+      _demoView(
+        south: const [aceHearts, kingDiamonds],
+        trick: [
+          TablePlay(
+            seat: Seat.north,
+            card: const Card(rank: Rank.three, suit: Suit.hearts),
+          ),
+        ],
+        legalSouth: const [aceHearts],
+      ),
+    );
+    await tester.pumpWidget(_app(session));
+
+    final playable = tester.widget<PlayingCard>(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    final dimmed = tester.widget<PlayingCard>(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.king, suit: ArtSuit.diamonds),
+        ),
+      ),
+    );
+    expect(playable.presence, CardPresence.playable);
+    expect(dimmed.presence, CardPresence.dimmed);
+
+    final aceFinder = find.byKey(
+      const ValueKey<CardArtId>(
+        CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+      ),
+    );
+    final kingFinder = find.byKey(
+      const ValueKey<CardArtId>(
+        CardArtId(rank: ArtRank.king, suit: ArtSuit.diamonds),
+      ),
+    );
+    await tester.tapAt(
+      _cardPoint(tester, kingFinder, const Offset(0.88, 0.55)),
+    );
+    await tester.pump();
+    expect(session.intents, isEmpty);
+
+    await tester.tapAt(_cardPoint(tester, aceFinder, const Offset(0.12, 0.55)));
+    await tester.pump();
+    expect(session.intents, hasLength(1));
+    expect(session.intents.single, isA<PlayCardIntent>());
+    expect((session.intents.single as PlayCardIntent).card, aceHearts);
+  });
+
+  testWidgets('tap on a lone legal south card sends playCard', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    const aceHearts = Card(rank: Rank.ace, suit: Suit.hearts);
+    final session = _FakeSession(
+      _demoView(
+        south: const [aceHearts],
+        trick: [
+          TablePlay(
+            seat: Seat.north,
+            card: const Card(rank: Rank.three, suit: Suit.hearts),
+          ),
+        ],
+        legalSouth: const [aceHearts],
+      ),
+    );
+    await tester.pumpWidget(_app(session));
+    await tester.tap(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(session.intents, hasLength(1));
+    expect((session.intents.single as PlayCardIntent).card, aceHearts);
+  });
+
+  testWidgets('south cards stay idle when it is not south turn', (
+    tester,
+  ) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    const aceHearts = Card(rank: Rank.ace, suit: Suit.hearts);
+    final session = _FakeSession(
+      _demoView(
+        toAct: Seat.east,
+        south: const [aceHearts],
+        trick: const [],
+        legalSouth: const [],
+      ),
+    );
+    await tester.pumpWidget(_app(session));
+    expect(
+      tester
+          .widget<PlayingCard>(
+            find.byKey(
+              const ValueKey<CardArtId>(
+                CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+              ),
+            ),
+          )
+          .presence,
+      CardPresence.idle,
+    );
+    await tester.tap(
+      find.byKey(
+        const ValueKey<CardArtId>(
+          CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(session.intents, isEmpty);
+    expect(
+      tester
+          .widget<PlayingCard>(
+            find.byKey(
+              const ValueKey<CardArtId>(
+                CardArtId(rank: ArtRank.ace, suit: ArtSuit.hearts),
+              ),
+            ),
+          )
+          .presence,
+      CardPresence.selected,
+    );
   });
 }
 
 Widget _app(GameSession session) {
   return MaterialApp(
     theme: CourtTheme.light().asMaterial(),
-    home: TablePage(session: session, art: const SvgCardArt()),
+    home: TablePage(session: session, art: const PngCardArt()),
   );
 }
 
-TableView _demoView({List<Card>? south, int northCount = 5}) {
+Offset _cardPoint(WidgetTester tester, Finder finder, Offset fraction) {
+  final box = tester.renderObject<RenderBox>(finder);
+  return box.localToGlobal(
+    Offset(box.size.width * fraction.dx, box.size.height * fraction.dy),
+  );
+}
+
+TableView _demoView({
+  List<Card>? south,
+  int northCount = 5,
+  int eastCount = 5,
+  int westCount = 5,
+  TablePhase phase = TablePhase.playing,
+  Seat toAct = Seat.south,
+  Suit? trump = Suit.hearts,
+  List<TablePlay>? trick,
+  List<Card> legalSouth = const [],
+}) {
   return TableView(
-    phase: TablePhase.playing,
-    toAct: Seat.south,
+    phase: phase,
+    toAct: toAct,
     hakem: Seat.south,
     dealer: Seat.west,
-    trump: Suit.hearts,
+    trump: trump,
     southHand:
         south ??
         const [
@@ -139,31 +578,33 @@ TableView _demoView({List<Card>? south, int northCount = 5}) {
           Card(rank: Rank.seven, suit: Suit.hearts),
         ],
     northCount: northCount,
-    eastCount: 5,
-    westCount: 5,
-    trick: [
-      TablePlay(
-        seat: Seat.north,
-        card: const Card(rank: Rank.three, suit: Suit.hearts),
-      ),
-      TablePlay(
-        seat: Seat.west,
-        card: const Card(rank: Rank.five, suit: Suit.hearts),
-      ),
-      TablePlay(
-        seat: Seat.east,
-        card: const Card(rank: Rank.six, suit: Suit.spades),
-      ),
-      TablePlay(
-        seat: Seat.south,
-        card: const Card(rank: Rank.ten, suit: Suit.spades),
-      ),
-    ],
+    eastCount: eastCount,
+    westCount: westCount,
+    trick:
+        trick ??
+        [
+          TablePlay(
+            seat: Seat.north,
+            card: const Card(rank: Rank.three, suit: Suit.hearts),
+          ),
+          TablePlay(
+            seat: Seat.west,
+            card: const Card(rank: Rank.five, suit: Suit.hearts),
+          ),
+          TablePlay(
+            seat: Seat.east,
+            card: const Card(rank: Rank.six, suit: Suit.spades),
+          ),
+          TablePlay(
+            seat: Seat.south,
+            card: const Card(rank: Rank.ten, suit: Suit.spades),
+          ),
+        ],
     northSouthTricks: 0,
     eastWestTricks: 0,
     northSouthCourts: 0,
     eastWestCourts: 0,
-    legalSouth: const [],
+    legalSouth: legalSouth,
   );
 }
 
@@ -181,8 +622,12 @@ final class _FakeSession implements GameSession {
     }
   }
 
+  final intents = <PlayerIntent>[];
+
   @override
-  void submit(PlayerIntent intent) {}
+  void submit(PlayerIntent intent) {
+    intents.add(intent);
+  }
 
   @override
   void addListener(void Function() listener) {

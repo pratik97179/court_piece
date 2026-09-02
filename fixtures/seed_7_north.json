@@ -1,0 +1,419 @@
+{
+  "seed": 7,
+  "dealer": "north",
+  "hakem": "west",
+  "deck": [
+    "6H",
+    "JD",
+    "6C",
+    "QC",
+    "KD",
+    "8S",
+    "QD",
+    "2S",
+    "JS",
+    "KS",
+    "2C",
+    "JH",
+    "4C",
+    "5D",
+    "8C",
+    "TH",
+    "AS",
+    "3C",
+    "9C",
+    "2H",
+    "TC",
+    "6D",
+    "3S",
+    "3H",
+    "3D",
+    "JC",
+    "QH",
+    "7C",
+    "8H",
+    "KC",
+    "TS",
+    "9S",
+    "7D",
+    "TD",
+    "4D",
+    "2D",
+    "AD",
+    "7H",
+    "5S",
+    "KH",
+    "7S",
+    "AC",
+    "QS",
+    "9H",
+    "4H",
+    "8D",
+    "5C",
+    "5H",
+    "6S",
+    "AH",
+    "9D",
+    "4S"
+  ],
+  "five": {
+    "north": [
+      "TH",
+      "AS",
+      "3C",
+      "9C",
+      "2H"
+    ],
+    "east": [
+      "2C",
+      "JH",
+      "4C",
+      "5D",
+      "8C"
+    ],
+    "south": [
+      "8S",
+      "QD",
+      "2S",
+      "JS",
+      "KS"
+    ],
+    "west": [
+      "6H",
+      "JD",
+      "6C",
+      "QC",
+      "KD"
+    ]
+  },
+  "stock": [
+    "TC",
+    "6D",
+    "3S",
+    "3H",
+    "3D",
+    "JC",
+    "QH",
+    "7C",
+    "8H",
+    "KC",
+    "TS",
+    "9S",
+    "7D",
+    "TD",
+    "4D",
+    "2D",
+    "AD",
+    "7H",
+    "5S",
+    "KH",
+    "7S",
+    "AC",
+    "QS",
+    "9H",
+    "4H",
+    "8D",
+    "5C",
+    "5H",
+    "6S",
+    "AH",
+    "9D",
+    "4S"
+  ],
+  "trump": "H",
+  "thirteen": {
+    "north": [
+      "TH",
+      "AS",
+      "3C",
+      "9C",
+      "2H",
+      "4H",
+      "8D",
+      "5C",
+      "5H",
+      "6S",
+      "AH",
+      "9D",
+      "4S"
+    ],
+    "east": [
+      "2C",
+      "JH",
+      "4C",
+      "5D",
+      "8C",
+      "AD",
+      "7H",
+      "5S",
+      "KH",
+      "7S",
+      "AC",
+      "QS",
+      "9H"
+    ],
+    "south": [
+      "8S",
+      "QD",
+      "2S",
+      "JS",
+      "KS",
+      "8H",
+      "KC",
+      "TS",
+      "9S",
+      "7D",
+      "TD",
+      "4D",
+      "2D"
+    ],
+    "west": [
+      "6H",
+      "JD",
+      "6C",
+      "QC",
+      "KD",
+      "TC",
+      "6D",
+      "3S",
+      "3H",
+      "3D",
+      "JC",
+      "QH",
+      "7C"
+    ]
+  },
+  "plays": [
+    {
+      "seat": "west",
+      "card": "6H"
+    },
+    {
+      "seat": "south",
+      "card": "8H"
+    },
+    {
+      "seat": "east",
+      "card": "JH"
+    },
+    {
+      "seat": "north",
+      "card": "TH"
+    },
+    {
+      "seat": "east",
+      "card": "2C"
+    },
+    {
+      "seat": "north",
+      "card": "3C"
+    },
+    {
+      "seat": "west",
+      "card": "6C"
+    },
+    {
+      "seat": "south",
+      "card": "KC"
+    },
+    {
+      "seat": "south",
+      "card": "8S"
+    },
+    {
+      "seat": "east",
+      "card": "5S"
+    },
+    {
+      "seat": "north",
+      "card": "AS"
+    },
+    {
+      "seat": "west",
+      "card": "3S"
+    },
+    {
+      "seat": "north",
+      "card": "9C"
+    },
+    {
+      "seat": "west",
+      "card": "QC"
+    },
+    {
+      "seat": "south",
+      "card": "QD"
+    },
+    {
+      "seat": "east",
+      "card": "4C"
+    },
+    {
+      "seat": "west",
+      "card": "JD"
+    },
+    {
+      "seat": "south",
+      "card": "7D"
+    },
+    {
+      "seat": "east",
+      "card": "5D"
+    },
+    {
+      "seat": "north",
+      "card": "8D"
+    },
+    {
+      "seat": "west",
+      "card": "KD"
+    },
+    {
+      "seat": "south",
+      "card": "TD"
+    },
+    {
+      "seat": "east",
+      "card": "AD"
+    },
+    {
+      "seat": "north",
+      "card": "9D"
+    },
+    {
+      "seat": "east",
+      "card": "8C"
+    },
+    {
+      "seat": "north",
+      "card": "5C"
+    },
+    {
+      "seat": "west",
+      "card": "TC"
+    },
+    {
+      "seat": "south",
+      "card": "2S"
+    },
+    {
+      "seat": "west",
+      "card": "6D"
+    },
+    {
+      "seat": "south",
+      "card": "4D"
+    },
+    {
+      "seat": "east",
+      "card": "7H"
+    },
+    {
+      "seat": "north",
+      "card": "2H"
+    },
+    {
+      "seat": "east",
+      "card": "KH"
+    },
+    {
+      "seat": "north",
+      "card": "4H"
+    },
+    {
+      "seat": "west",
+      "card": "3H"
+    },
+    {
+      "seat": "south",
+      "card": "JS"
+    }
+  ],
+  "tricks": [
+    {
+      "winner": "east",
+      "cards": [
+        "6H",
+        "8H",
+        "JH",
+        "TH"
+      ]
+    },
+    {
+      "winner": "south",
+      "cards": [
+        "2C",
+        "3C",
+        "6C",
+        "KC"
+      ]
+    },
+    {
+      "winner": "north",
+      "cards": [
+        "8S",
+        "5S",
+        "AS",
+        "3S"
+      ]
+    },
+    {
+      "winner": "west",
+      "cards": [
+        "9C",
+        "QC",
+        "QD",
+        "4C"
+      ]
+    },
+    {
+      "winner": "west",
+      "cards": [
+        "JD",
+        "7D",
+        "5D",
+        "8D"
+      ]
+    },
+    {
+      "winner": "east",
+      "cards": [
+        "KD",
+        "TD",
+        "AD",
+        "9D"
+      ]
+    },
+    {
+      "winner": "west",
+      "cards": [
+        "8C",
+        "5C",
+        "TC",
+        "2S"
+      ]
+    },
+    {
+      "winner": "east",
+      "cards": [
+        "6D",
+        "4D",
+        "7H",
+        "2H"
+      ]
+    },
+    {
+      "winner": "east",
+      "cards": [
+        "KH",
+        "4H",
+        "3H",
+        "JS"
+      ]
+    }
+  ],
+  "winner": "eastWest",
+  "court": false,
+  "northSouthTricks": 2,
+  "eastWestTricks": 7
+}

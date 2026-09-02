@@ -1,12 +1,15 @@
 import 'dart:math' as math;
 
+import 'package:court_piece/design/card_fan.dart';
+import 'package:court_piece/design/motion.dart';
 import 'package:court_piece/design/recipe.dart';
 import 'package:court_piece/design/theme.dart';
+import 'package:court_piece/domain/seat.dart';
 import 'package:flutter/material.dart';
 
 enum CardScale { opponent, trick, hand }
 
-/// Card sizes for one table. Positions come from [TableLayout].
+/// Card sizes for one table. Seats sit around the plate, not the screen.
 @immutable
 final class TableModule {
   const TableModule({
@@ -15,9 +18,15 @@ final class TableModule {
     required this.opponentWidth,
     required this.handOverlap,
     required this.opponentOverlap,
+    required this.handArc,
+    required this.handTilt,
+    required this.avatarSize,
     required this.inset,
     required this.gap,
     required this.plate,
+    required this.plateMax,
+    required this.opponentFanAlong,
+    required this.handFanAlong,
   });
 
   final double handWidth;
@@ -25,17 +34,68 @@ final class TableModule {
   final double opponentWidth;
   final double handOverlap;
   final double opponentOverlap;
+  final double handArc;
+  final double handTilt;
+  final double avatarSize;
   final double inset;
   final double gap;
   final double plate;
+  final double plateMax;
+  final double opponentFanAlong;
+  final double handFanAlong;
 
   static const aspect = 5 / 7;
+
+  static const handCount = 13;
 
   double get handHeight => handWidth / aspect;
 
   double get opponentHeight => opponentWidth / aspect;
 
   double get trickHeight => trickWidth / aspect;
+
+  double get southHeight {
+    final spec = FanSpec(
+      cardWidth: handWidth,
+      overlap: handOverlap,
+      arc: handArc,
+      tilt: handTilt,
+      maxAlong: handFanAlong,
+    );
+    return FanLayout.measure(count: handCount, spec: spec).height + 10;
+  }
+
+  double get northSeatHeight {
+    final fan = FanLayout.measure(count: handCount, spec: _opponentFanSpec());
+    return avatarSize + 12 + fan.height;
+  }
+
+  double get sideSeatWidth {
+    final fan = FanLayout.measure(
+      count: handCount,
+      spec: _opponentFanSpec(rotation: -math.pi / 2),
+    );
+    return avatarSize + 12 + fan.width;
+  }
+
+  double get sideSeatHeight {
+    final fan = FanLayout.measure(
+      count: handCount,
+      spec: _opponentFanSpec(rotation: -math.pi / 2),
+    );
+    return math.max(avatarSize + 24, fan.height + 4);
+  }
+
+  FanSpec _opponentFanSpec({double rotation = 0}) {
+    return FanSpec(
+      cardWidth: opponentWidth,
+      overlap: opponentOverlap,
+      arc: 0.16,
+      tilt: 0.14,
+      rotation: rotation,
+      maxAlong: opponentFanAlong,
+    );
+  }
 
   double widthFor(CardScale scale) {
     return switch (scale) {
@@ -59,50 +119,87 @@ final class TableModule {
   ) {
     final width = constraints.maxWidth;
     final height = constraints.maxHeight;
-    final short = math.min(width, height);
-    final handCap = switch (breakpoint) {
-      CourtBreakpoint.compact => short * 0.26,
-      CourtBreakpoint.medium => 152.0,
-      CourtBreakpoint.expanded => 172.0,
+    final handOverlap = switch (breakpoint) {
+      CourtBreakpoint.compact => 0.6,
+      CourtBreakpoint.medium => 0.5,
+      CourtBreakpoint.expanded => 0.44,
     };
-    final handHeight = math.min(height * 0.2, handCap);
-    final handWidth = handHeight * aspect;
+    final handFanAlong = switch (breakpoint) {
+      CourtBreakpoint.compact => width * 0.94,
+      CourtBreakpoint.medium => math.min(width * 0.68, 620.0),
+      CourtBreakpoint.expanded => math.min(width * 0.74, 860.0),
+    };
+    final span = 1 + (handCount - 1) * (1 - handOverlap);
+    var handWidth = handFanAlong / span;
+    final handHCap =
+        height *
+        switch (breakpoint) {
+          CourtBreakpoint.compact => 0.22,
+          CourtBreakpoint.medium => 0.2,
+          CourtBreakpoint.expanded => 0.2,
+        };
+    if (handWidth / aspect > handHCap) {
+      handWidth = handHCap * aspect;
+    }
     final trickWidth =
         handWidth *
         switch (breakpoint) {
-          CourtBreakpoint.compact => 0.76,
-          CourtBreakpoint.medium => 0.82,
-          CourtBreakpoint.expanded => 0.86,
+          CourtBreakpoint.compact => 0.72,
+          CourtBreakpoint.medium => 0.78,
+          CourtBreakpoint.expanded => 0.8,
         };
+    final opponentFanAlong = switch (breakpoint) {
+      CourtBreakpoint.compact => math.min(width * 0.36, 118.0),
+      CourtBreakpoint.medium => 132.0,
+      CourtBreakpoint.expanded => 148.0,
+    };
     return TableModule(
       handWidth: handWidth,
       trickWidth: trickWidth,
-      opponentWidth:
-          handWidth *
-          switch (breakpoint) {
-            CourtBreakpoint.compact => 0.55,
-            CourtBreakpoint.medium => 0.6,
-            CourtBreakpoint.expanded => 0.63,
-          },
-      handOverlap: switch (breakpoint) {
-        CourtBreakpoint.compact => 0.5,
-        CourtBreakpoint.medium => 0.36,
-        CourtBreakpoint.expanded => 0.22,
+      opponentWidth: switch (breakpoint) {
+        CourtBreakpoint.compact => 26.0,
+        CourtBreakpoint.medium => 28.0,
+        CourtBreakpoint.expanded => 30.0,
       },
+      handOverlap: handOverlap,
       opponentOverlap: switch (breakpoint) {
-        CourtBreakpoint.compact => 0.56,
-        CourtBreakpoint.medium => 0.48,
-        CourtBreakpoint.expanded => 0.4,
+        CourtBreakpoint.compact => 0.8,
+        CourtBreakpoint.medium => 0.78,
+        CourtBreakpoint.expanded => 0.76,
       },
-      inset:
-          short *
-          switch (breakpoint) {
-            CourtBreakpoint.compact => 0.02,
-            CourtBreakpoint.medium => 0.026,
-            CourtBreakpoint.expanded => 0.03,
-          },
-      gap: (short * 0.03).clamp(10.0, 22.0),
-      plate: (trickWidth / aspect) * 1.85,
+      handArc: switch (breakpoint) {
+        CourtBreakpoint.compact => 0.32,
+        CourtBreakpoint.medium => 0.14,
+        CourtBreakpoint.expanded => 0.11,
+      },
+      handTilt: switch (breakpoint) {
+        CourtBreakpoint.compact => 0.15,
+        CourtBreakpoint.medium => 0.09,
+        CourtBreakpoint.expanded => 0.07,
+      },
+      avatarSize: switch (breakpoint) {
+        CourtBreakpoint.compact => 22.0,
+        CourtBreakpoint.medium => 24.0,
+        CourtBreakpoint.expanded => 26.0,
+      },
+      inset: switch (breakpoint) {
+        CourtBreakpoint.compact => 8.0,
+        CourtBreakpoint.medium => 16.0,
+        CourtBreakpoint.expanded => 24.0,
+      },
+      gap: switch (breakpoint) {
+        CourtBreakpoint.compact => 6.0,
+        CourtBreakpoint.medium => 10.0,
+        CourtBreakpoint.expanded => 14.0,
+      },
+      plate: math.max(trickWidth * 2.55, (trickWidth / aspect) * 2.2),
+      plateMax: switch (breakpoint) {
+        CourtBreakpoint.compact => double.infinity,
+        CourtBreakpoint.medium => 340.0,
+        CourtBreakpoint.expanded => 380.0,
+      },
+      opponentFanAlong: opponentFanAlong,
+      handFanAlong: handFanAlong,
     );
   }
 
@@ -114,9 +211,15 @@ final class TableModule {
         opponentWidth == other.opponentWidth &&
         handOverlap == other.handOverlap &&
         opponentOverlap == other.opponentOverlap &&
+        handArc == other.handArc &&
+        handTilt == other.handTilt &&
+        avatarSize == other.avatarSize &&
         inset == other.inset &&
         gap == other.gap &&
-        plate == other.plate;
+        plate == other.plate &&
+        plateMax == other.plateMax &&
+        opponentFanAlong == other.opponentFanAlong &&
+        handFanAlong == other.handFanAlong;
   }
 
   @override
@@ -127,14 +230,20 @@ final class TableModule {
       opponentWidth,
       handOverlap,
       opponentOverlap,
+      handArc,
+      handTilt,
+      avatarSize,
       inset,
       gap,
       plate,
+      plateMax,
+      opponentFanAlong,
+      handFanAlong,
     );
   }
 }
 
-/// Pixel placement of seats around the trick. Slack sits outside the cluster.
+/// Seat boxes around a centered plate.
 @immutable
 final class TableLayout {
   const TableLayout({
@@ -146,10 +255,14 @@ final class TableLayout {
     required this.plateLeft,
     required this.plateTop,
     required this.plate,
+    required this.southTop,
     required this.southHeight,
-    required this.bottomPad,
     required this.inset,
     required this.northHeight,
+    required this.boardLeft,
+    required this.boardTop,
+    required this.boardWidth,
+    required this.boardHeight,
   });
 
   final double northTop;
@@ -160,69 +273,74 @@ final class TableLayout {
   final double plateLeft;
   final double plateTop;
   final double plate;
+  final double southTop;
   final double southHeight;
-  final double bottomPad;
   final double inset;
   final double northHeight;
+  final double boardLeft;
+  final double boardTop;
+  final double boardWidth;
+  final double boardHeight;
 
   factory TableLayout.from(Size size, TableModule module) {
     final inset = module.inset;
-    final oppW = module.opponentWidth;
-    final oppH = module.opponentHeight;
-    final southH = module.handHeight * 1.1;
-    final westH = oppH + 4 * oppH * (1 - module.opponentOverlap);
-    var plate = module.plate;
+    final boardLeft = inset;
+    final boardTop = inset;
+    final boardWidth = math.max(1.0, size.width - 2 * inset);
+    final boardHeight = math.max(1.0, size.height - 2 * inset);
+
+    final northH = module.northSeatHeight;
+    final sideW = module.sideSeatWidth;
+    final sideH = module.sideSeatHeight;
+    final southH = module.southHeight;
     var gap = module.gap;
-    final bottomPad = inset * 1.5;
-    final topPad = inset;
-    final sidePad = inset;
 
-    final maxPlateW = size.width - 2 * sidePad - 2 * oppW - 2 * gap;
-    if (plate > maxPlateW) {
-      plate = math.max(module.trickHeight * 1.35, maxPlateW);
+    var leftoverW = boardWidth - 2 * sideW - 2 * gap;
+    var leftoverH = boardHeight - northH - southH - 2 * gap;
+    if (leftoverW < 48 || leftoverH < 48) {
+      final scale = math.min(
+        leftoverW < 48 ? (boardWidth - 2 * sideW) / (2 * gap + 48) : 1.0,
+        leftoverH < 48 ? (boardHeight - northH - southH) / (2 * gap + 48) : 1.0,
+      );
+      gap *= scale.clamp(0.35, 1.0);
+      leftoverW = boardWidth - 2 * sideW - 2 * gap;
+      leftoverH = boardHeight - northH - southH - 2 * gap;
     }
 
-    final southTop = size.height - bottomPad - southH;
-    final playH = southTop - topPad;
-    var clusterH = oppH + gap + plate + gap;
-    if (clusterH > playH && clusterH > 0) {
-      final scale = playH / clusterH;
-      plate *= scale;
-      gap *= scale;
-      clusterH = oppH + gap + plate + gap;
+    final leftover = math.min(leftoverW, leftoverH);
+    var plate = leftover;
+    if (plate > module.plateMax) {
+      plate = module.plateMax;
     }
-
-    final slack = math.max(0.0, playH - clusterH);
-    final northTop = topPad + slack * 0.58;
-    final plateTop = northTop + oppH + gap;
-    final plateLeft = (size.width - plate) / 2;
-    final plateCenterY = plateTop + plate / 2;
-
-    var westLeft = plateLeft - gap - oppW;
-    if (westLeft < sidePad) {
-      westLeft = sidePad;
+    if (plate < module.plate && leftover >= module.plate) {
+      plate = math.min(module.plate, leftover);
     }
-    var eastLeft = plateLeft + plate + gap;
-    if (eastLeft + oppW > size.width - sidePad) {
-      eastLeft = size.width - sidePad - oppW;
-    }
+    plate = plate.clamp(48.0, math.max(48.0, leftover));
 
-    var westTop = plateCenterY - westH / 2;
-    westTop = westTop.clamp(topPad, math.max(topPad, southTop - westH));
+    final clusterW = sideW + gap + plate + gap + sideW;
+    final clusterH = northH + gap + plate + gap + southH;
+    final clusterLeft = boardLeft + (boardWidth - clusterW) / 2;
+    final clusterTop = boardTop + (boardHeight - clusterH) / 2;
+    final plateLeft = clusterLeft + sideW + gap;
+    final plateTop = clusterTop + northH + gap;
 
     return TableLayout(
-      northTop: northTop,
-      westLeft: westLeft,
-      westTop: westTop,
-      eastLeft: eastLeft,
-      eastTop: westTop,
+      northTop: clusterTop,
+      westLeft: clusterLeft,
+      westTop: plateTop + (plate - sideH) / 2,
+      eastLeft: plateLeft + plate + gap,
+      eastTop: plateTop + (plate - sideH) / 2,
       plateLeft: plateLeft,
       plateTop: plateTop,
       plate: plate,
+      southTop: plateTop + plate + gap,
       southHeight: southH,
-      bottomPad: bottomPad,
       inset: inset,
-      northHeight: oppH,
+      northHeight: northH,
+      boardLeft: boardLeft,
+      boardTop: boardTop,
+      boardWidth: boardWidth,
+      boardHeight: boardHeight,
     );
   }
 }
@@ -242,41 +360,207 @@ class TableScope extends InheritedWidget {
   }
 }
 
-/// Played cards sit toward the seat that played them.
+/// Played cards fly in from each seat, then collect toward the trick winner.
 class TrickWell extends StatelessWidget {
-  const TrickWell({super.key, this.north, this.east, this.south, this.west});
+  const TrickWell({
+    super.key,
+    this.north,
+    this.east,
+    this.south,
+    this.west,
+    this.collectWinner,
+    this.onCollected,
+    this.onCardLanded,
+  });
 
   final Widget? north;
   final Widget? east;
   final Widget? south;
   final Widget? west;
+  final Seat? collectWinner;
+  final VoidCallback? onCollected;
+  final VoidCallback? onCardLanded;
+
+  static Alignment _seatFrom(Seat seat) {
+    return switch (seat) {
+      Seat.north => const Alignment(0, -1.35),
+      Seat.south => const Alignment(0, 1.35),
+      Seat.west => const Alignment(-1.35, 0),
+      Seat.east => const Alignment(1.35, 0),
+    };
+  }
+
+  static Alignment _seatSlot(Seat seat) {
+    return switch (seat) {
+      Seat.north => const Alignment(0, -0.38),
+      Seat.south => const Alignment(0, 0.38),
+      Seat.west => const Alignment(-0.38, 0),
+      Seat.east => const Alignment(0.38, 0),
+    };
+  }
+
+  static Alignment _winnerToward(Seat seat) {
+    return switch (seat) {
+      Seat.north => const Alignment(0, -0.95),
+      Seat.south => const Alignment(0, 0.95),
+      Seat.west => const Alignment(-0.95, 0),
+      Seat.east => const Alignment(0.95, 0),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = CourtTheme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: theme.ink.withValues(alpha: 0.028),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (north != null)
-            Align(alignment: const Alignment(0, -0.3), child: north),
-          if (south != null)
-            Align(alignment: const Alignment(0, 0.3), child: south),
-          if (west != null)
-            Align(alignment: const Alignment(-0.3, 0), child: west),
-          if (east != null)
-            Align(alignment: const Alignment(0.3, 0), child: east),
-        ],
-      ),
+    final collecting = collectWinner != null;
+    final slots = <Seat, Widget?>{
+      Seat.north: north,
+      Seat.east: east,
+      Seat.south: south,
+      Seat.west: west,
+    };
+    var pending = 0;
+    for (final entry in slots.entries) {
+      if (entry.value != null) {
+        pending += 1;
+      }
+    }
+    void slotDone() {
+      pending -= 1;
+      if (pending <= 0) {
+        onCollected?.call();
+      }
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        for (final entry in slots.entries)
+          if (entry.value != null)
+            _TrickSlot(
+              key: ValueKey<String>('trick-${entry.key.name}'),
+              seat: entry.key,
+              from: _seatFrom(entry.key),
+              to: _seatSlot(entry.key),
+              toward: collecting ? _winnerToward(collectWinner!) : null,
+              onCollected: collecting ? slotDone : null,
+              onCardLanded: collecting ? null : onCardLanded,
+              child: entry.value,
+            ),
+      ],
     );
   }
 }
 
-/// Four seats and a center well on a felt surface.
+class _TrickSlot extends StatefulWidget {
+  const _TrickSlot({
+    super.key,
+    required this.seat,
+    required this.from,
+    required this.to,
+    required this.child,
+    this.toward,
+    this.onCollected,
+    this.onCardLanded,
+  });
+
+  final Seat seat;
+  final Alignment from;
+  final Alignment to;
+  final Alignment? toward;
+  final Widget? child;
+  final VoidCallback? onCollected;
+  final VoidCallback? onCardLanded;
+
+  @override
+  State<_TrickSlot> createState() => _TrickSlotState();
+}
+
+class _TrickSlotState extends State<_TrickSlot> {
+  Widget? _held;
+  var _entered = false;
+  var _collecting = false;
+  var _pendingCollect = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _held = widget.child;
+    _entered = widget.child == null;
+  }
+
+  @override
+  void didUpdateWidget(_TrickSlot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final newKey = widget.child?.key;
+    final oldKey = oldWidget.child?.key;
+    if (newKey != oldKey) {
+      if (widget.child != null) {
+        _held = widget.child;
+        _entered = false;
+        _collecting = false;
+      } else if (widget.toward == null) {
+        _held = null;
+        _entered = false;
+        _pendingCollect = false;
+        _collecting = false;
+      }
+    }
+    if (widget.toward != null && _held != null) {
+      _pendingCollect = true;
+      if (_entered) {
+        _collecting = true;
+      }
+    }
+    if (widget.toward == null) {
+      _pendingCollect = false;
+      _collecting = false;
+    }
+  }
+
+  void _onEntered() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _entered = true;
+      if (_pendingCollect) {
+        _collecting = true;
+      }
+    });
+    widget.onCardLanded?.call();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_held == null) {
+      return const SizedBox.shrink();
+    }
+    if (_collecting && widget.toward != null) {
+      return CourtCollect(
+        from: widget.to,
+        toward: widget.toward!,
+        onFinished: widget.onCollected,
+        child: _held!,
+      );
+    }
+    if (!_entered) {
+      return CourtFlight(
+        key: ValueKey<Object?>(_held!.key),
+        from: widget.from,
+        to: widget.to,
+        visible: true,
+        onFinished: () {
+          if (mounted) {
+            _onEntered();
+          }
+        },
+        child: _held!,
+      );
+    }
+    return Align(alignment: widget.to, child: _held!);
+  }
+}
+
+/// Four seats around one table. Positions come from the plate center.
 class GameTable extends StatelessWidget {
   const GameTable({
     super.key,
@@ -296,70 +580,90 @@ class GameTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final breakpoint = CourtScope.of(context).breakpoint;
+    final theme = CourtTheme.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final module = TableModule.from(constraints, breakpoint);
         final layout = TableLayout.from(constraints.biggest, module);
+        final boardFill = Color.lerp(
+          theme.felt,
+          theme.surface,
+          theme.brightness == Brightness.dark ? 0.1 : 0.18,
+        )!;
+        final plateFill = Color.lerp(boardFill, theme.felt, 0.32)!;
+        final radius = math.min(layout.boardWidth, layout.boardHeight) * 0.045;
         return TableScope(
           module: module,
-          child: _TableFelt(
+          child: ColoredBox(
+            color: theme.felt,
             child: Stack(
+              clipBehavior: Clip.none,
               children: [
                 Positioned(
-                  left: layout.inset,
-                  right: layout.inset,
+                  left: layout.boardLeft,
+                  top: layout.boardTop,
+                  width: layout.boardWidth,
+                  height: layout.boardHeight,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: boardFill,
+                      borderRadius: BorderRadius.circular(radius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: theme.ink.withValues(alpha: 0.07),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: layout.plateLeft,
                   top: layout.northTop,
+                  width: layout.plate,
                   height: layout.northHeight,
-                  child: Center(child: north),
+                  child: Align(alignment: Alignment.bottomCenter, child: north),
                 ),
                 Positioned(
                   left: layout.westLeft,
                   top: layout.westTop,
-                  child: west,
+                  width: module.sideSeatWidth,
+                  height: module.sideSeatHeight,
+                  child: Align(alignment: Alignment.centerRight, child: west),
                 ),
                 Positioned(
                   left: layout.eastLeft,
                   top: layout.eastTop,
-                  child: east,
+                  width: module.sideSeatWidth,
+                  height: module.sideSeatHeight,
+                  child: Align(alignment: Alignment.centerLeft, child: east),
                 ),
                 Positioned(
                   left: layout.plateLeft,
                   top: layout.plateTop,
                   width: layout.plate,
                   height: layout.plate,
-                  child: well,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: plateFill,
+                      borderRadius: BorderRadius.circular(layout.plate * 0.2),
+                    ),
+                    child: well,
+                  ),
                 ),
                 Positioned(
-                  left: layout.inset,
-                  right: layout.inset,
-                  bottom: layout.bottomPad,
+                  left: layout.boardLeft,
+                  width: layout.boardWidth,
+                  top: layout.southTop,
                   height: layout.southHeight,
-                  child: Center(child: south),
+                  child: Align(alignment: Alignment.bottomCenter, child: south),
                 ),
               ],
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class _TableFelt extends StatelessWidget {
-  const _TableFelt({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = CourtTheme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    final wash = Color.lerp(theme.felt, theme.surface, dark ? 0.08 : 0.16)!;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(radius: 0.9, colors: [wash, theme.felt]),
-      ),
-      child: child,
     );
   }
 }

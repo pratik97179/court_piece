@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:court_piece/application/card_art.dart';
 import 'package:court_piece/application/game_session.dart';
 import 'package:court_piece/design/design.dart';
@@ -17,21 +19,113 @@ class TablePage extends StatefulWidget {
 }
 
 class _TablePageState extends State<TablePage> {
+  Card? _lifted;
+  List<TablePlay> _wellPlays = const [];
+  Seat? _collectWinner;
+  Seat? _pendingCollectWinner;
+  var _awaitingCollect = false;
+  var _paceLocked = false;
+  Timer? _paceTimer;
+
+  PausableGameSession? get _pausable =>
+      widget.session is PausableGameSession
+      ? widget.session as PausableGameSession
+      : null;
+
   @override
   void initState() {
     super.initState();
     widget.session.addListener(_onView);
+    _wellPlays = widget.session.view.trick;
   }
 
   @override
   void dispose() {
+    _paceTimer?.cancel();
     widget.session.removeListener(_onView);
     widget.session.dispose();
     super.dispose();
   }
 
+  void _pauseActing() {
+    _paceLocked = true;
+    _pausable?.setActingPaused(true);
+  }
+
+  void _resumeActing() {
+    if (!_paceLocked) {
+      return;
+    }
+    _paceLocked = false;
+    _pausable?.setActingPaused(false);
+  }
+
   void _onView() {
+    final view = widget.session.view;
+    final hand = view.southHand;
+    if (_lifted != null && !hand.contains(_lifted)) {
+      _lifted = null;
+    }
+    for (final event in widget.session.takeEvents()) {
+      if (event is TableTrickWon) {
+        _wellPlays = event.plays;
+        _pendingCollectWinner = event.winner;
+        _awaitingCollect = true;
+        _pauseActing();
+      }
+    }
+    if (_collectWinner == null && !_awaitingCollect) {
+      final viewTrick = view.trick;
+      if (viewTrick.length > _wellPlays.length) {
+        _wellPlays = viewTrick;
+        _pauseActing();
+      } else if (!_paceLocked) {
+        _wellPlays = viewTrick;
+      }
+    }
     setState(() {});
+  }
+
+  void _onWellCardLanded() {
+    if (!_paceLocked && !_awaitingCollect) {
+      return;
+    }
+    _paceTimer?.cancel();
+    if (_awaitingCollect && _wellPlays.length == 4) {
+      _paceTimer = Timer(CourtMotion.trickBeat, () {
+        if (!mounted || !_awaitingCollect) {
+          return;
+        }
+        setState(() {
+          _collectWinner = _pendingCollectWinner;
+          _pendingCollectWinner = null;
+          _awaitingCollect = false;
+        });
+      });
+      return;
+    }
+    _paceTimer = Timer(CourtMotion.beat, () {
+      if (!mounted) {
+        return;
+      }
+      _resumeActing();
+      setState(() {});
+    });
+  }
+
+  void _onTrickCollected() {
+    _paceTimer?.cancel();
+    setState(() {
+      _collectWinner = null;
+      _wellPlays = widget.session.view.trick;
+    });
+    _paceTimer = Timer(CourtMotion.afterCollectBeat, () {
+      if (!mounted) {
+        return;
+      }
+      _resumeActing();
+      setState(() {});
+    });
   }
 
   @override
@@ -47,55 +141,105 @@ class _TablePageState extends State<TablePage> {
           icon: const Icon(Icons.close),
         ),
       ),
+      overlay: _trumpOverlay(view),
       table: GameTable(
-        north: _backs(Seat.north, view.northCount),
-        east: _backs(Seat.east, view.eastCount, axis: Axis.vertical),
-        west: _backs(Seat.west, view.westCount, axis: Axis.vertical),
+        north: OpponentSeat(
+          seat: Seat.north,
+          count: view.northCount,
+          art: widget.art,
+        ),
+        east: OpponentSeat(
+          seat: Seat.east,
+          count: view.eastCount,
+          art: widget.art,
+        ),
+        west: OpponentSeat(
+          seat: Seat.west,
+          count: view.westCount,
+          art: widget.art,
+        ),
         south: SeatRail(
+          key: const ValueKey<String>('south-rail'),
           scale: CardScale.hand,
           cards: [
             for (final card in view.southHand)
               PlayingCard(
                 art: widget.art,
                 view: CardView(id: _artId(card)),
-                presence: CardPresence.idle,
+                presence: _handPresence(view, card),
                 scale: CardScale.hand,
+                onTap: () => _onSouthTap(view, card),
               ),
           ],
         ),
         well: TrickWell(
-          north: _trick(view, Seat.north),
-          east: _trick(view, Seat.east),
-          west: _trick(view, Seat.west),
-          south: _trick(view, Seat.south),
+          north: _wellCard(Seat.north),
+          east: _wellCard(Seat.east),
+          west: _wellCard(Seat.west),
+          south: _wellCard(Seat.south),
+          collectWinner: _collectWinner,
+          onCollected: _onTrickCollected,
+          onCardLanded: _onWellCardLanded,
         ),
       ),
     );
   }
 
-  SeatRail _backs(Seat seat, int count, {Axis axis = Axis.horizontal}) {
-    return SeatRail(
-      axis: axis,
-      scale: CardScale.opponent,
-      cards: [
-        for (var i = 0; i < count; i++)
-          PlayingCard(
-            key: ValueKey<String>('${seat.name}-$i'),
-            art: widget.art,
-            view: const CardView(
-              id: CardArtId(rank: ArtRank.ace, suit: ArtSuit.clubs),
+  void _onSouthTap(TableView view, Card card) {
+    setState(() => _lifted = card);
+    if (!_southPlays(view) || !view.legalSouth.contains(card)) {
+      return;
+    }
+    _pauseActing();
+    widget.session.submit(PlayCardIntent(card));
+  }
+
+  CourtOverlay? _trumpOverlay(TableView view) {
+    if (view.phase != TablePhase.waitingTrump || view.toAct != Seat.south) {
+      return null;
+    }
+    return CourtOverlay(
+      title: 'Name trump',
+      child: Row(
+        children: [
+          for (final suit in Suit.values)
+            Expanded(
+              child: _TrumpSuit(
+                suit: suit,
+                onPick: () {
+                  widget.session.submit(CallTrumpIntent(suit));
+                },
+              ),
             ),
-            presence: CardPresence.facedown,
-            scale: CardScale.opponent,
-          ),
-      ],
+        ],
+      ),
     );
   }
 
-  PlayingCard? _trick(TableView view, Seat seat) {
-    for (final play in view.trick) {
+  CardPresence _handPresence(TableView view, Card card) {
+    if (_lifted == card) {
+      return CardPresence.selected;
+    }
+    if (!_southPlays(view)) {
+      return CardPresence.idle;
+    }
+    return view.legalSouth.contains(card)
+        ? CardPresence.playable
+        : CardPresence.dimmed;
+  }
+
+  bool _southPlays(TableView view) {
+    return view.phase == TablePhase.playing &&
+        view.toAct == Seat.south &&
+        view.legalSouth.isNotEmpty &&
+        !_paceLocked;
+  }
+
+  PlayingCard? _wellCard(Seat seat) {
+    for (final play in _wellPlays) {
       if (play.seat == seat) {
         return PlayingCard(
+          key: ValueKey<String>('well-${play.seat.name}-${play.card.code}'),
           art: widget.art,
           view: CardView(id: _artId(play.card)),
           presence: CardPresence.idle,
@@ -111,4 +255,62 @@ CardArtId _artId(Card card) {
     rank: ArtRank.values[card.rank.index],
     suit: ArtSuit.values[card.suit.index],
   );
+}
+
+class _TrumpSuit extends StatelessWidget {
+  const _TrumpSuit({required this.suit, required this.onPick});
+
+  final Suit suit;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = CourtTheme.of(context);
+    final recipe = CourtScope.of(context).recipe;
+    final red = suit == Suit.hearts || suit == Suit.diamonds;
+    return InkWell(
+      key: ValueKey<String>('trump-${suit.name}'),
+      onTap: onPick,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: recipe.titleSize * 0.35),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _suitMark(suit),
+              style: TextStyle(
+                color: red ? theme.accent : theme.ink,
+                fontSize: recipe.titleSize * 1.7,
+                height: 1,
+              ),
+            ),
+            SizedBox(height: recipe.titleSize * 0.28),
+            Text(
+              _suitLabel(suit),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: theme.muted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _suitMark(Suit suit) {
+  return switch (suit) {
+    Suit.clubs => '\u2663',
+    Suit.diamonds => '\u2666',
+    Suit.hearts => '\u2665',
+    Suit.spades => '\u2660',
+  };
+}
+
+String _suitLabel(Suit suit) {
+  return switch (suit) {
+    Suit.clubs => 'Clubs',
+    Suit.diamonds => 'Diamonds',
+    Suit.hearts => 'Hearts',
+    Suit.spades => 'Spades',
+  };
 }

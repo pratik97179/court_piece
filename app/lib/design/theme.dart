@@ -1,3 +1,4 @@
+import 'package:court_piece/design/motion.dart';
 import 'package:flutter/material.dart';
 
 @immutable
@@ -114,6 +115,16 @@ final class CourtTheme extends ThemeExtension<CourtTheme> {
       colorScheme: scheme,
       scaffoldBackgroundColor: felt,
       canvasColor: felt,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: CourtPageTransitionsBuilder(),
+          TargetPlatform.iOS: CourtPageTransitionsBuilder(),
+          TargetPlatform.macOS: CourtPageTransitionsBuilder(),
+          TargetPlatform.linux: CourtPageTransitionsBuilder(),
+          TargetPlatform.windows: CourtPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: CourtPageTransitionsBuilder(),
+        },
+      ),
       iconTheme: IconThemeData(color: ink),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(

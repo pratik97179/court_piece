@@ -51,13 +51,18 @@ void main() {
   });
 
   testWidgets('Play opens TablePage from a session', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
     await tester.pumpWidget(const CourtApp());
     await tester.tap(find.byKey(const ValueKey<String>('play-local')));
     await tester.pumpAndSettle();
 
     expect(find.byType(TablePage), findsOneWidget);
     expect(find.byType(GameTable), findsOneWidget);
-    expect(find.byType(SeatRail), findsNWidgets(4));
+    expect(find.byType(SeatRail), findsOneWidget);
+    expect(find.byType(OpponentSeat), findsNWidgets(3));
     expect(find.byType(TrickWell), findsOneWidget);
   });
 }

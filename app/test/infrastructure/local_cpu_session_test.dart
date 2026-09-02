@@ -41,6 +41,20 @@ void main() {
     session.dispose();
   });
 
+  test('cpu pause names trump then waits to play', () {
+    final session = LocalCpuSession(
+      cpu: _ScriptedCpu(trump: Suit.hearts),
+      seed: 1,
+      dealer: Seat.south,
+      cpuPause: const Duration(seconds: 30),
+    );
+    expect(session.view.phase, TablePhase.playing);
+    expect(session.view.trump, Suit.hearts);
+    expect(session.view.trick, isEmpty);
+    expect(session.view.southHand, hasLength(13));
+    session.dispose();
+  });
+
   test('south play updates the view and cpus continue', () {
     final session = LocalCpuSession(
       cpu: _ScriptedCpu(trump: Suit.hearts),
@@ -59,6 +73,36 @@ void main() {
       session.view.northSouthTricks + session.view.eastWestTricks,
       greaterThanOrEqualTo(1),
     );
+    session.dispose();
+  });
+
+  test('setActingPaused toggles without blocking human submit', () {
+    final session = LocalCpuSession(
+      cpu: _ScriptedCpu(trump: Suit.hearts),
+      seed: 1,
+      dealer: Seat.south,
+    );
+    session.setActingPaused(true);
+    final before = session.view.southHand.length;
+    session.submit(PlayCardIntent(session.view.legalSouth.first));
+    expect(session.view.southHand.length, before - 1);
+    session.setActingPaused(false);
+    session.dispose();
+  });
+
+  test('completing a trick emits TableTrickWon', () {
+    final session = LocalCpuSession(
+      cpu: _ScriptedCpu(trump: Suit.hearts),
+      seed: 1,
+      dealer: Seat.south,
+    );
+    final card = session.view.legalSouth.first;
+    session.submit(PlayCardIntent(card));
+    final events = session.takeEvents();
+    expect(events.whereType<TableTrickWon>(), isNotEmpty);
+    final won = events.whereType<TableTrickWon>().first;
+    expect(won.plays, hasLength(4));
+    expect(won.winner, isNotNull);
     session.dispose();
   });
 
@@ -81,25 +125,28 @@ void main() {
     session.dispose();
   });
 
-  test('first-legal play reaches deal over, then StartDeal begins the next', () {
-    final session = LocalCpuSession(
-      cpu: _ScriptedCpu(),
-      seed: 1,
-      dealer: Seat.west,
-    );
-    _playUntilIdle(session);
-    expect(session.view.phase, TablePhase.dealOver);
-    expect(session.view.dealWinner, isNotNull);
-    final events = session.takeEvents();
-    expect(events.whereType<TableDealOver>(), hasLength(1));
-    session.submit(const StartDealIntent());
-    expect(
-      session.view.phase,
-      anyOf(TablePhase.waitingTrump, TablePhase.playing),
-    );
-    expect(session.view.dealWinner, isNull);
-    session.dispose();
-  });
+  test(
+    'first-legal play reaches deal over, then StartDeal begins the next',
+    () {
+      final session = LocalCpuSession(
+        cpu: _ScriptedCpu(),
+        seed: 1,
+        dealer: Seat.west,
+      );
+      _playUntilIdle(session);
+      expect(session.view.phase, TablePhase.dealOver);
+      expect(session.view.dealWinner, isNotNull);
+      final events = session.takeEvents();
+      expect(events.whereType<TableDealOver>(), hasLength(1));
+      session.submit(const StartDealIntent());
+      expect(
+        session.view.phase,
+        anyOf(TablePhase.waitingTrump, TablePhase.playing),
+      );
+      expect(session.view.dealWinner, isNull);
+      session.dispose();
+    },
+  );
 
   test('dispose ignores later submits', () {
     final session = LocalCpuSession(

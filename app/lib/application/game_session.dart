@@ -16,6 +16,11 @@ abstract interface class GameSession {
   void dispose();
 }
 
+/// Sessions that can wait for table animations before the next turn.
+abstract interface class PausableGameSession implements GameSession {
+  void setActingPaused(bool paused);
+}
+
 /// Human action. The session maps this to a domain intent.
 sealed class PlayerIntent {
   const PlayerIntent();
@@ -130,4 +135,34 @@ final class TableMatchOver extends TableEvent {
   const TableMatchOver(this.winner);
 
   final Team winner;
+}
+
+/// A four-card trick just finished. Used for the collect animation.
+final class TableTrickWon extends TableEvent {
+  const TableTrickWon({required this.winner, required this.plays});
+
+  final Seat winner;
+  final List<TablePlay> plays;
+
+  @override
+  bool operator ==(Object other) {
+    return other is TableTrickWon &&
+        winner == other.winner &&
+        _playsEq(plays, other.plays);
+  }
+
+  @override
+  int get hashCode => Object.hash(winner, Object.hashAll(plays));
+
+  static bool _playsEq(List<TablePlay> a, List<TablePlay> b) {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

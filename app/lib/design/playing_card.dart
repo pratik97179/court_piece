@@ -1,8 +1,9 @@
 import 'package:court_piece/application/card_art.dart';
+import 'package:court_piece/design/motion.dart';
 import 'package:court_piece/design/table.dart';
 import 'package:court_piece/design/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:motor/motor.dart';
 
 enum CardPresence { idle, playable, selected, dimmed, facedown }
 
@@ -53,37 +54,62 @@ class PlayingCard extends StatelessWidget {
     final radius = BorderRadius.circular(width * 0.08);
     final dimmed = presence == CardPresence.dimmed;
     final selected = presence == CardPresence.selected;
-    final child = presence == CardPresence.facedown
+    final face = presence == CardPresence.facedown
         ? _CardBack(radius: radius)
-        : SvgPicture.asset(art.faceAsset(view.id), fit: BoxFit.contain);
-    return RepaintBoundary(
-      child: Transform.translate(
-        offset: Offset(0, selected ? -5 : 0),
-        child: SizedBox(
-          width: width,
-          height: height,
-          child: Material(
-            color: theme.surface,
-            elevation: selected ? 3 : 1,
-            shadowColor: theme.ink.withValues(alpha: 0.28),
-            shape: RoundedRectangleBorder(
-              borderRadius: radius,
-              side: BorderSide(color: theme.ink.withValues(alpha: 0.06)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              child: dimmed
-                  ? ColorFiltered(
-                      colorFilter: ColorFilter.mode(
-                        theme.felt.withValues(alpha: 0.4),
-                        BlendMode.srcATop,
+        : Image.asset(art.faceAsset(view.id), fit: BoxFit.contain);
+    final liftTo = selected
+        ? 1.0
+        : presence == CardPresence.playable
+        ? 0.55
+        : 0.0;
+    return SizedBox(
+      width: width,
+      height: height,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap ?? () {},
+        child: SingleMotionBuilder(
+          motion: CourtMotion.play(context),
+          value: liftTo,
+          builder: (context, lift, _) {
+            return SingleMotionBuilder(
+              motion: CourtMotion.play(context),
+              value: dimmed ? 1.0 : 0.0,
+              builder: (context, dim, _) {
+                return Transform.translate(
+                  offset: Offset(0, -16 * lift),
+                  transformHitTests: false,
+                  child: Transform.scale(
+                    scale: 1 + (0.025 * lift),
+                    child: Material(
+                      color: theme.surface,
+                      elevation: 1 + (2 * lift),
+                      shadowColor: theme.ink.withValues(alpha: 0.28),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: radius,
+                        side: BorderSide(
+                          color: theme.ink.withValues(alpha: 0.06),
+                        ),
                       ),
-                      child: child,
-                    )
-                  : child,
-            ),
-          ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Positioned.fill(child: face),
+                          if (dim > 0.01)
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: theme.felt.withValues(alpha: 0.4 * dim),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
