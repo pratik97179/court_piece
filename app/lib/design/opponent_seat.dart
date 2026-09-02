@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:court_piece/application/card_art.dart';
 import 'package:court_piece/design/card_fan.dart';
+import 'package:court_piece/design/motion.dart';
 import 'package:court_piece/design/playing_card.dart';
 import 'package:court_piece/design/recipe.dart';
 import 'package:court_piece/design/table.dart';
@@ -16,11 +17,13 @@ class OpponentSeat extends StatelessWidget {
     required this.seat,
     required this.count,
     required this.art,
+    this.dealEpoch = 0,
   });
 
   final Seat seat;
   final int count;
   final CardArt art;
+  final int dealEpoch;
 
   @override
   Widget build(BuildContext context) {
@@ -30,14 +33,18 @@ class OpponentSeat extends StatelessWidget {
     final pile = CardFan(
       spec: fan,
       count: count,
-      cardBuilder: (i) => PlayingCard(
-        key: ValueKey<String>('${seat.name}-$i'),
-        art: art,
-        view: const CardView(
-          id: CardArtId(rank: ArtRank.ace, suit: ArtSuit.clubs),
+      cardBuilder: (i) => CourtEnter(
+        key: ValueKey<String>('enter-${seat.name}-$i-$dealEpoch'),
+        slot: i,
+        child: PlayingCard(
+          key: ValueKey<String>('${seat.name}-$i'),
+          art: art,
+          view: const CardView(
+            id: CardArtId(rank: ArtRank.ace, suit: ArtSuit.clubs),
+          ),
+          presence: CardPresence.facedown,
+          scale: CardScale.opponent,
         ),
-        presence: CardPresence.facedown,
-        scale: CardScale.opponent,
       ),
     );
     final identity = _SeatIdentity(seat: seat, count: count);

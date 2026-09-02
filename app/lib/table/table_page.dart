@@ -25,6 +25,9 @@ class _TablePageState extends State<TablePage> {
   Seat? _pendingCollectWinner;
   var _awaitingCollect = false;
   var _paceLocked = false;
+  var _dealEpoch = 0;
+  var _dealLive = false;
+  var _southShown = 0;
   Timer? _paceTimer;
 
   PausableGameSession? get _pausable =>
@@ -36,7 +39,14 @@ class _TablePageState extends State<TablePage> {
   void initState() {
     super.initState();
     widget.session.addListener(_onView);
-    _wellPlays = widget.session.view.trick;
+    final view = widget.session.view;
+    _wellPlays = view.trick;
+    _southShown = view.southHand.length;
+    if (_isLive(view)) {
+      _dealLive = true;
+      _dealEpoch = 1;
+      _beginDealIn(view);
+    }
   }
 
   @override
@@ -45,6 +55,11 @@ class _TablePageState extends State<TablePage> {
     widget.session.removeListener(_onView);
     widget.session.dispose();
     super.dispose();
+  }
+
+  bool _isLive(TableView view) {
+    return view.phase == TablePhase.waitingTrump ||
+        view.phase == TablePhase.playing;
   }
 
   void _pauseActing() {
@@ -58,6 +73,48 @@ class _TablePageState extends State<TablePage> {
     }
     _paceLocked = false;
     _pausable?.setActingPaused(false);
+  }
+
+  void _beginDealIn(TableView view) {
+    if (_pausable == null) {
+      return;
+    }
+    _pauseActing();
+    final count = [
+      view.southHand.length,
+      view.northCount,
+      view.eastCount,
+      view.westCount,
+    ].fold<int>(0, (a, b) => a > b ? a : b);
+    _paceTimer?.cancel();
+    _paceTimer = Timer(CourtMotion.dealIn(count), () {
+      if (!mounted) {
+        return;
+      }
+      _resumeActing();
+      setState(() {});
+    });
+  }
+
+  void _syncDealIn(TableView view) {
+    if (!_isLive(view)) {
+      _dealLive = false;
+      _southShown = 0;
+      return;
+    }
+    if (!_dealLive) {
+      _dealLive = true;
+      _dealEpoch += 1;
+      _southShown = view.southHand.length;
+      _beginDealIn(view);
+      return;
+    }
+    if (view.southHand.length > _southShown + 2) {
+      _southShown = view.southHand.length;
+      _beginDealIn(view);
+      return;
+    }
+    _southShown = view.southHand.length;
   }
 
   void _onView() {
@@ -74,6 +131,7 @@ class _TablePageState extends State<TablePage> {
         _pauseActing();
       }
     }
+    _syncDealIn(view);
     if (_collectWinner == null && !_awaitingCollect) {
       final viewTrick = view.trick;
       if (viewTrick.length > _wellPlays.length) {
@@ -156,28 +214,37 @@ class _TablePageState extends State<TablePage> {
           seat: Seat.north,
           count: view.northCount,
           art: widget.art,
+          dealEpoch: _dealEpoch,
         ),
         east: OpponentSeat(
           seat: Seat.east,
           count: view.eastCount,
           art: widget.art,
+          dealEpoch: _dealEpoch,
         ),
         west: OpponentSeat(
           seat: Seat.west,
           count: view.westCount,
           art: widget.art,
+          dealEpoch: _dealEpoch,
         ),
         south: SeatRail(
-          key: const ValueKey<String>('south-rail'),
+          key: ValueKey<String>('south-rail-$_dealEpoch'),
           scale: CardScale.hand,
           cards: [
-            for (final card in view.southHand)
-              PlayingCard(
-                art: widget.art,
-                view: CardView(id: _artId(card)),
-                presence: _handPresence(view, card),
-                scale: CardScale.hand,
-                onTap: () => _onSouthTap(view, card),
+            for (var i = 0; i < view.southHand.length; i++)
+              CourtEnter(
+                key: ValueKey<String>(
+                  'enter-south-${view.southHand[i].code}-$_dealEpoch',
+                ),
+                slot: i,
+                child: PlayingCard(
+                  art: widget.art,
+                  view: CardView(id: _artId(view.southHand[i])),
+                  presence: _handPresence(view, view.southHand[i]),
+                  scale: CardScale.hand,
+                  onTap: () => _onSouthTap(view, view.southHand[i]),
+                ),
               ),
           ],
         ),
@@ -233,6 +300,7 @@ class _TablePageState extends State<TablePage> {
           TextButton(
             key: const ValueKey<String>('next-deal'),
             onPressed: () {
+              _pauseActing();
               widget.session.submit(const StartDealIntent());
             },
             child: const Text('Next deal'),
@@ -288,6 +356,7 @@ class _TablePageState extends State<TablePage> {
               child: _TrumpSuit(
                 suit: suit,
                 onPick: () {
+                  _pauseActing();
                   widget.session.submit(CallTrumpIntent(suit));
                 },
               ),

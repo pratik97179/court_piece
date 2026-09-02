@@ -557,6 +557,40 @@ void main() {
     expect(find.byKey(const ValueKey<String>('trump-mark-spades')), findsOneWidget);
   });
 
+  testWidgets('dealt cards enter through CourtEnter', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(
+        _FakeSession(
+          _demoView(
+            south: const [
+              Card(rank: Rank.ace, suit: Suit.hearts),
+              Card(rank: Rank.king, suit: Suit.diamonds),
+              Card(rank: Rank.queen, suit: Suit.spades),
+            ],
+            northCount: 3,
+            eastCount: 3,
+            westCount: 3,
+            trick: const [],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(CourtEnter), findsNWidgets(12));
+    expect(
+      find.byKey(const ValueKey<String>('enter-south-AH-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('enter-north-0-1')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('deal over overlay starts the next deal', (tester) async {
     addTearDown(() async {
       await tester.binding.setSurfaceSize(null);

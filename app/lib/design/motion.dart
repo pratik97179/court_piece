@@ -41,6 +41,9 @@ abstract final class CourtMotion {
 
   static const Duration beat = Duration(milliseconds: 420);
 
+  /// Stagger between cards during deal-in.
+  static const Duration dealSlot = Duration(milliseconds: 22);
+
   /// Pause after the fourth card lands, before cards collect to the winner.
   static const Duration trickBeat = Duration(milliseconds: 480);
 
@@ -75,6 +78,14 @@ abstract final class CourtMotion {
 
   static bool live(BuildContext context) {
     return !MediaQuery.disableAnimationsOf(context);
+  }
+
+  /// Wait for the last staggered deal-in card, then one beat.
+  static Duration dealIn(int count) {
+    if (count <= 0) {
+      return beat;
+    }
+    return dealSlot * (count - 1) + beat;
   }
 }
 
@@ -229,7 +240,7 @@ class _DelayedEnterState extends State<_DelayedEnter> {
   @override
   void initState() {
     super.initState();
-    final wait = widget.slot * 22;
+    final wait = widget.slot * CourtMotion.dealSlot.inMilliseconds;
     if (wait <= 0) {
       _on = true;
       return;
