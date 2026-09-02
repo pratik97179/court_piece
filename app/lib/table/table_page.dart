@@ -141,8 +141,17 @@ class _TablePageState extends State<TablePage> {
           icon: const Icon(Icons.close),
         ),
       ),
-      overlay: _trumpOverlay(view),
+      overlay: _overlay(view),
       table: GameTable(
+        score: ScorePips(
+          northSouthTricks: view.northSouthTricks,
+          eastWestTricks: view.eastWestTricks,
+          northSouthCourts: view.northSouthCourts,
+          eastWestCourts: view.eastWestCourts,
+        ),
+        trump: view.phase == TablePhase.playing && view.trump != null
+            ? TrumpMark(suit: view.trump!)
+            : null,
         north: OpponentSeat(
           seat: Seat.north,
           count: view.northCount,
@@ -192,6 +201,78 @@ class _TablePageState extends State<TablePage> {
     }
     _pauseActing();
     widget.session.submit(PlayCardIntent(card));
+  }
+
+  CourtOverlay? _overlay(TableView view) {
+    if (view.phase == TablePhase.matchOver) {
+      return _matchOverlay(view);
+    }
+    if (view.phase == TablePhase.dealOver) {
+      return _dealOverlay(view);
+    }
+    return _trumpOverlay(view);
+  }
+
+  CourtOverlay? _dealOverlay(TableView view) {
+    final winner = view.dealWinner;
+    if (winner == null) {
+      return null;
+    }
+    final title = view.dealCourt ? 'Court' : 'Deal over';
+    return CourtOverlay(
+      title: title,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _teamWonLabel(winner),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            key: const ValueKey<String>('next-deal'),
+            onPressed: () {
+              widget.session.submit(const StartDealIntent());
+            },
+            child: const Text('Next deal'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  CourtOverlay? _matchOverlay(TableView view) {
+    final winner = view.matchWinner;
+    if (winner == null) {
+      return null;
+    }
+    return CourtOverlay(
+      title: 'Match won',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _teamWonLabel(winner),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 16),
+          TextButton(
+            key: const ValueKey<String>('leave-match'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _teamWonLabel(Team team) {
+    return switch (team) {
+      Team.northSouth => 'Your team wins',
+      Team.eastWest => 'Opponents win',
+    };
   }
 
   CourtOverlay? _trumpOverlay(TableView view) {

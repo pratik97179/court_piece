@@ -569,6 +569,8 @@ class GameTable extends StatelessWidget {
     required this.south,
     required this.west,
     required this.well,
+    this.score,
+    this.trump,
   });
 
   final Widget north;
@@ -576,6 +578,8 @@ class GameTable extends StatelessWidget {
   final Widget south;
   final Widget west;
   final Widget well;
+  final Widget? score;
+  final Widget? trump;
 
   @override
   Widget build(BuildContext context) {
@@ -659,6 +663,19 @@ class GameTable extends StatelessWidget {
                   height: layout.southHeight,
                   child: Align(alignment: Alignment.bottomCenter, child: south),
                 ),
+                if (score != null)
+                  Positioned(
+                    left: layout.boardLeft,
+                    top: layout.boardTop + module.inset * 0.35,
+                    width: layout.boardWidth,
+                    child: Center(child: score!),
+                  ),
+                if (trump != null)
+                  Positioned(
+                    left: layout.plateLeft + layout.plate * 0.72,
+                    top: layout.plateTop + layout.plate * 0.06,
+                    child: trump!,
+                  ),
               ],
             ),
           ),

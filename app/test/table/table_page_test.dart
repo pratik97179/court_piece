@@ -533,6 +533,80 @@ void main() {
       CardPresence.selected,
     );
   });
+
+  testWidgets('score pips and trump mark show during play', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(
+        _FakeSession(
+          _demoView(
+            northSouthTricks: 3,
+            eastWestTricks: 2,
+            northSouthCourts: 1,
+            eastWestCourts: 0,
+            trump: Suit.spades,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey<String>('score-pips')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('trump-mark-spades')), findsOneWidget);
+  });
+
+  testWidgets('deal over overlay starts the next deal', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    final session = _FakeSession(
+      _demoView(
+        phase: TablePhase.dealOver,
+        dealWinner: Team.northSouth,
+        dealCourt: true,
+        trump: Suit.hearts,
+        trick: const [],
+        south: const [],
+        legalSouth: const [],
+      ),
+    );
+    await tester.pumpWidget(_app(session));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Court'), findsOneWidget);
+    expect(find.text('Your team wins'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('next-deal')));
+    expect(session.intents, [const StartDealIntent()]);
+  });
+
+  testWidgets('match over overlay offers leave', (tester) async {
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      _app(
+        _FakeSession(
+          _demoView(
+            phase: TablePhase.matchOver,
+            matchWinner: Team.eastWest,
+            trump: Suit.hearts,
+            trick: const [],
+            south: const [],
+            legalSouth: const [],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Match won'), findsOneWidget);
+    expect(find.text('Opponents win'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('leave-match')), findsOneWidget);
+  });
 }
 
 Widget _app(GameSession session) {
@@ -559,6 +633,13 @@ TableView _demoView({
   Suit? trump = Suit.hearts,
   List<TablePlay>? trick,
   List<Card> legalSouth = const [],
+  int northSouthTricks = 0,
+  int eastWestTricks = 0,
+  int northSouthCourts = 0,
+  int eastWestCourts = 0,
+  Team? dealWinner,
+  bool dealCourt = false,
+  Team? matchWinner,
 }) {
   return TableView(
     phase: phase,
@@ -600,11 +681,14 @@ TableView _demoView({
             card: const Card(rank: Rank.ten, suit: Suit.spades),
           ),
         ],
-    northSouthTricks: 0,
-    eastWestTricks: 0,
-    northSouthCourts: 0,
-    eastWestCourts: 0,
+    northSouthTricks: northSouthTricks,
+    eastWestTricks: eastWestTricks,
+    northSouthCourts: northSouthCourts,
+    eastWestCourts: eastWestCourts,
     legalSouth: legalSouth,
+    dealWinner: dealWinner,
+    dealCourt: dealCourt,
+    matchWinner: matchWinner,
   );
 }
 
